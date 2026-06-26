@@ -505,11 +505,29 @@ function loadData() {
       allData = resp.data;
       localStorage.setItem('ddh_data', JSON.stringify(allData));
       setSyncStatus('✅ Sincronizado · ' + new Date().toLocaleTimeString('es-HN'), '#27ae60');
+      finishLoad();
     } else {
-      setSyncStatus('⚠ Servidor vacío, cargando local', '#e67e22');
-      loadDataLocal();
+      // Servidor vacío o con pocos datos: cargar DATA_INICIAL y subir al servidor
+      setSyncStatus('⏳ Inicializando servidor...', '#8e44ad');
+      allData = DATA_INICIAL.map((r,i) => ({...r, _id: i+1}));
+      allData.sort((a,b)=>{
+        const ts = v => { const m=v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); return m?`${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`:v; };
+        return ts(b['FECHA DE INGRESO']||'').localeCompare(ts(a['FECHA DE INGRESO']||''));
+      });
+      localStorage.setItem('ddh_data', JSON.stringify(allData));
+      // Subir automáticamente al servidor
+      fetch(GS_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'setData', data: allData })
+      }).then(() => {
+        setSyncStatus('✅ ' + allData.length + ' registros subidos al servidor · ' + new Date().toLocaleTimeString('es-HN'), '#27ae60');
+      }).catch(() => {
+        setSyncStatus('⚠ No se pudo subir al servidor', '#e74c3c');
+      });
+      finishLoad();
     }
-    finishLoad();
   }, () => {
     setSyncStatus('⚠ Sin conexión · modo local', '#e74c3c');
     loadDataLocal();
