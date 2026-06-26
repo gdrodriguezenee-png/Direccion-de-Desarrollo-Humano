@@ -305,6 +305,7 @@
         <button class="btn btn-success" id="btnAgregar" onclick="openAdd()" style="display:none">＋ Agregar</button>
         <button class="btn btn-primary" onclick="exportToExcel()" title="Exportar documentos visibles a Excel">⬇ Exportar Excel</button>
         <button class="btn" onclick="loadData()" title="Recargar datos desde el servidor" style="background:#17a589;color:#fff">🔄 Actualizar</button>
+        <button id="btnUpload" onclick="uploadLocalData()" title="Subir datos locales al servidor" style="background:#8e44ad;color:#fff;display:none">⬆ Subir al servidor</button>
       </div>
       <div class="table-wrap">
         <div class="table-info" id="tableInfo"></div>
@@ -532,6 +533,45 @@ function finishLoad() {
   applyFilters();
   buildStats();
   renderLog();
+  checkUploadNeeded();
+}
+
+function checkUploadNeeded() {
+  if (!GS_URL) return;
+  const local = JSON.parse(localStorage.getItem('ddh_data') || '[]');
+  // Si hay más datos locales que en el servidor, mostrar botón de subida
+  if (local.length > allData.length) {
+    const btn = document.getElementById('btnUpload');
+    if (btn) {
+      btn.style.display = 'inline-block';
+      btn.textContent = '⬆ Subir al servidor (' + local.length + ' registros locales)';
+    }
+  } else {
+    const btn = document.getElementById('btnUpload');
+    if (btn) btn.style.display = 'none';
+  }
+}
+
+function uploadLocalData() {
+  const local = JSON.parse(localStorage.getItem('ddh_data') || '[]');
+  if (local.length === 0) { alert('No hay datos locales para subir.'); return; }
+  if (!confirm('¿Subir ' + local.length + ' registros locales al servidor? Esto reemplazará los datos actuales en Google Sheets.')) return;
+  allData = local;
+  setSyncStatus('⏳ Subiendo ' + local.length + ' registros...', '#8e44ad');
+  fetch(GS_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'setData', data: allData })
+  }).then(() => {
+    setSyncStatus('✅ ' + local.length + ' registros subidos · ' + new Date().toLocaleTimeString('es-HN'), '#27ae60');
+    const btn = document.getElementById('btnUpload');
+    if (btn) btn.style.display = 'none';
+    addLog('upload', 'Subió ' + local.length + ' registros locales al servidor');
+    applyFilters(); buildStats();
+  }).catch(() => {
+    setSyncStatus('⚠ Error al subir datos', '#e74c3c');
+  });
 }
 
 // ─── GUARDAR: localStorage + Google Sheets ──────────────────
