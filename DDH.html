@@ -447,7 +447,7 @@ let activeStatFilter = null;
 // ═══════════════════════════════════════════════════════════
 // CONFIGURACIÓN GOOGLE SHEETS  ─ pegar URL del Apps Script
 // ═══════════════════════════════════════════════════════════
-const GS_URL = 'https://script.google.com/macros/s/AKfycbxpGrigzjZ47PQ760eBstDwU4I_IUAcIQN4HLxJLHx80ffYp7y4RIr44szeu1U0r00N/exec';
+const GS_URL = 'https://script.google.com/macros/s/AKfycbxes_FR_uG4IiZ60GuDVI5BxCIlB0yFxOpzIUwPBXlrp_eFZAQIZ70SPT50o7wJNZKp/exec';
 // Ejemplo: 'https://script.google.com/macros/s/XXXXXXXX/exec'
 // Si está vacío, funciona en modo local (localStorage)
 
@@ -539,38 +539,18 @@ function saveData() {
   localStorage.setItem('ddh_data', JSON.stringify(allData));
   if (!GS_URL) return;
   setSyncStatus('⏳ Guardando...', '#e67e22');
-  // Enviar en chunks de 50 registros para evitar límite de URL
-  sendChunks(allData, 0, 50);
-}
-
-function sendChunks(data, start, chunkSize) {
-  const total = data.length;
-  const chunk = data.slice(start, start + chunkSize);
-  const isFirst = start === 0;
-  const isLast = start + chunkSize >= total;
-  jsonpCall({
-    action: 'setChunk',
-    chunk: chunk,
-    start: start,
-    total: total,
-    isFirst: isFirst ? '1' : '0',
-    isLast: isLast ? '1' : '0'
-  }, (resp) => {
-    if (!resp || !resp.ok) {
-      setSyncStatus('⚠ Error al guardar en servidor', '#e74c3c');
-      return;
-    }
-    if (isLast) {
-      setSyncStatus('✅ Guardado · ' + new Date().toLocaleTimeString('es-HN'), '#27ae60');
-    } else {
-      const pct = Math.round((start + chunkSize) / total * 100);
-      setSyncStatus('⏳ Guardando ' + pct + '%...', '#e67e22');
-      sendChunks(data, start + chunkSize, chunkSize);
-    }
-  }, () => {
+  fetch(GS_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'setData', data: allData })
+  }).then(() => {
+    setSyncStatus('✅ Guardado · ' + new Date().toLocaleTimeString('es-HN'), '#27ae60');
+  }).catch(() => {
     setSyncStatus('⚠ Sin conexión (guardado local)', '#e74c3c');
   });
 }
+
 
 // ─── LOGIN ───
 function doLogin() {
