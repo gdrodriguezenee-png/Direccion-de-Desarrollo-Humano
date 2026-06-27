@@ -502,7 +502,21 @@ function loadData() {
   setSyncStatus('⏳ Cargando desde servidor...', '#e67e22');
   jsonpCall({ action: 'getData' }, (resp) => {
     if (resp && resp.ok && Array.isArray(resp.data) && resp.data.length > 0) {
-      allData = resp.data;
+      // Normalizar fechas que vienen del Sheets como strings largos
+      const dateCols = ['FECHA DE INGRESO','FECHA DE ENTREGA'];
+      allData = resp.data.map(r => {
+        const nr = {...r};
+        dateCols.forEach(col => {
+          const v = nr[col];
+          if(v && v.includes(' ') && v.length > 10) {
+            try {
+              const d = new Date(v);
+              if(!isNaN(d)) nr[col] = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+            } catch(e) {}
+          }
+        });
+        return nr;
+      });
       localStorage.setItem('ddh_data', JSON.stringify(allData));
       setSyncStatus('✅ Sincronizado · ' + new Date().toLocaleTimeString('es-HN'), '#27ae60');
       finishLoad();
@@ -947,8 +961,16 @@ function openAdd() {
 function fmtDate(val) {
   if(!val || val==='NaT' || val==='nan' || val==='None') return '—';
   if(/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(val)) return val;
+  // YYYY-MM-DD format
   const m = val.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if(m) return `${parseInt(m[3])}/${parseInt(m[2])}/${m[1]}`;
+  // Date string from Sheets like "Wed May 27 2026 00:00:00 GMT-0600"
+  if(val.includes(' ') && val.length > 10) {
+    try {
+      const d = new Date(val);
+      if(!isNaN(d)) return `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`;
+    } catch(e) {}
+  }
   return val;
 }
 function toIsoDate(val) {
