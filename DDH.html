@@ -649,9 +649,7 @@ function doLogin() {
 function doLogout() {
   addLog('logout','Cerró sesión');
   currentUser = null;
-  document.getElementById('loginOverlay').style.display='flex';
-  document.getElementById('app').style.display='none';
-  document.getElementById('loginUser').value='';
+  window.location.href = 'Portal.html';
 }
 
 function setupUI() {
