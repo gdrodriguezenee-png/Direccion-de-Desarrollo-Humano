@@ -432,9 +432,9 @@ const DATA_INICIAL = [{"FECHA DE INGRESO": "2026-05-04", "ORIGEN": "Lic. Marcos 
 const USERS = {
   admin:   { pass:'ENEE2026', role:'Administrador', name:'Administrador' },
 };
-const ROLES_EDIT = ['Administrador','Editor','Supervisor'];
+const ROLES_EDIT = ['Administrador','Editor'];
 const ROLES_DEL  = ['Administrador'];
-const ROLES_LOG  = ['Administrador','Supervisor'];
+const ROLES_LOG  = ['Administrador'];
 
 let currentUser = null;
 let allData = [];
@@ -1233,7 +1233,7 @@ function openEditUser(key) {
 }
 
 function buildUserForm(u, key) {
-  const roles = ['Administrador','Editor','Supervisor','Consulta'];
+  const roles = ['Administrador','Editor','Consulta'];
   return `<div class="form-grid">
     <div class="form-group">
       <label>Clave de usuario (login)</label>
