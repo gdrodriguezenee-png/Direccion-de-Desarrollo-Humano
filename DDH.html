@@ -905,7 +905,7 @@ function buildStats() {
 
 // ─── VER DETALLE ───
 function viewRow(id) {
-  const r = allData.find(x=>x._id===id);
+  const r = allData.find(x=>String(x._id)===String(id));
   if(!r) return;
   document.getElementById('modalTitle').textContent = '📄 Detalle del Documento';
   const dateFlds = new Set(['FECHA DE INGRESO','FECHA DE ENTREGA']);
@@ -934,7 +934,7 @@ function viewRow(id) {
 
 // ─── EDITAR ───
 function editRow(id) {
-  const r = allData.find(x=>x._id===id);
+  const r = allData.find(x=>String(x._id)===String(id));
   if(!r) return;
   document.getElementById('modalTitle').textContent = '✏ Editar Documento';
   document.getElementById('modalBody').innerHTML = buildForm(r);
@@ -1055,7 +1055,7 @@ function getFormValues() {
 }
 
 function saveEdit(id) {
-  const idx = allData.findIndex(x=>x._id===id);
+  const idx = allData.findIndex(x=>String(x._id)===String(id));
   if(idx<0) return;
   const old = {...allData[idx]};
   const vals = getFormValues();
@@ -1078,10 +1078,10 @@ function saveAdd() {
 }
 
 function delRow(id) {
-  const r = allData.find(x=>x._id===id);
+  const r = allData.find(x=>String(x._id)===String(id));
   if(!r) return;
   if(!confirm(`¿Eliminar el documento "${r['NUMERO DE DOCUMENTO']}"?\n${r['ASUNTO'].slice(0,80)}\n\nEsta acción quedará registrada en bitácora.`)) return;
-  allData = allData.filter(x=>x._id!==id);
+  allData = allData.filter(x=>String(x._id)!==String(id));
   saveData();
   addLog('del', `Eliminó registro ID ${id} · Doc: ${r['NUMERO DE DOCUMENTO']} · Asunto: ${r['ASUNTO'].slice(0,60)}`);
   applyFilters();
