@@ -139,7 +139,22 @@ td.resp-cell{white-space:nowrap;font-weight:500;}
     </div>
     <h3>Iniciar Sesion</h3>
     <div class="lc"><label>Usuario</label>
-      <select id="l-usuario"><option value="">Seleccione su nombre</option></select>
+      <select id="l-usuario">
+          <option value="">Seleccione su nombre</option>
+          <option value="Blopez">Blopez</option>
+          <option value="CV">CV</option>
+          <option value="GSO">GSO</option>
+          <option value="IReyes">IReyes</option>
+          <option value="JG">JG</option>
+          <option value="LV">LV</option>
+          <option value="Ligia Villela">Ligia Villela (Admin)</option>
+          <option value="OM">OM</option>
+          <option value="PM">PM</option>
+          <option value="SA">SA</option>
+          <option value="SARAAL">SARAAL</option>
+          <option value="SG">SG</option>
+          <option value="admin">Administrador (Admin)</option>
+        </select>
     </div>
     <div class="lc"><label>Contrasena</label>
       <input type="password" id="l-pass" placeholder="Ingrese su contrasena">
@@ -383,14 +398,16 @@ function recargar(){
 function rebuildLoginSelect(){
   var sel=document.getElementById('l-usuario');
   var prev=sel.value;
-  sel.innerHTML='<option value="">Seleccione su nombre</option>';
-  USUARIOS.forEach(function(u){
-    var o=document.createElement('option');
-    o.value=u.id; o.textContent=u.nombre+(u.rol==='admin'?' (Admin)':'');
-    sel.appendChild(o);
-  });
-  if(prev) sel.value=prev;
-  document.getElementById('btn-ingresar').disabled=false;
+  // Solo reconstruir si vienen usuarios de Sheets (más de los locales)
+  if(USUARIOS.length > 0){
+    sel.innerHTML='<option value="">Seleccione su nombre</option>';
+    USUARIOS.forEach(function(u){
+      var o=document.createElement('option');
+      o.value=u.id; o.textContent=u.nombre+(u.rol==='admin'?' (Admin)':'');
+      sel.appendChild(o);
+    });
+    if(prev) sel.value=prev;
+  }
 }
 
 // Poblar select al cargar el DOM
