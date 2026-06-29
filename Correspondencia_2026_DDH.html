@@ -302,8 +302,8 @@ var usuarioActual = null;
 var tipoActual = 'Memorando';
 var editIdx = null;
 var editNo = null;
-var sortCol = null;
-var sortAsc = true;
+var sortCol = 'no';
+var sortAsc = false;
 var guardandoAhora = false;
 var reloadTimer = null;
 var dataCargadaDeSheets = false;
@@ -497,7 +497,7 @@ function actualizarTabs(){
 }
 
 function cambiarTab(tipo){
-  tipoActual=tipo; sortCol=null; sortAsc=true;
+  tipoActual=tipo; sortCol='no'; sortAsc=false;
   document.getElementById('buscar').value='';
   document.getElementById('filtro-resp').value='';
   var t=getTipo(tipo);
@@ -507,15 +507,25 @@ function cambiarTab(tipo){
 
 /* ===================== CABECERAS ===================== */
 function actualizarCabeceras(){
-  document.getElementById('t-head').innerHTML='<tr>'
-    +'<th onclick="ord(\'no\')" >N</th>'
-    +'<th onclick="ord(\'remite\')">A quien se remite</th>'
-    +'<th onclick="ord(\'resp\')">Realizado por</th>'
-    +'<th onclick="ord(\'fecha\')">Fecha</th>'
-    +'<th onclick="ord(\'asunto\')">Asunto</th>'
-    +'<th onclick="ord(\'obs\')">Observacion</th>'
-    +'<th>Acciones</th>'
-    +'</tr>';
+  var cols = [
+    {label:'N',                  col:'no'},
+    {label:'A quien se remite',  col:'remite'},
+    {label:'Realizado por',      col:'resp'},
+    {label:'Fecha',              col:'fecha'},
+    {label:'Asunto',             col:'asunto'},
+    {label:'Observacion',        col:'obs'},
+    {label:'Acciones',           col:null}
+  ];
+  var tr = document.createElement('tr');
+  cols.forEach(function(c){
+    var th = document.createElement('th');
+    th.textContent = c.label;
+    if(c.col){ (function(col){ th.onclick = function(){ ord(col); }; })(c.col); }
+    tr.appendChild(th);
+  });
+  var thead = document.getElementById('t-head');
+  thead.innerHTML = '';
+  thead.appendChild(tr);
 }
 
 /* ===================== FILTROS ===================== */
