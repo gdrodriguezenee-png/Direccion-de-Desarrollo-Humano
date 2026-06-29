@@ -23,18 +23,13 @@
     margin-bottom: 50px;
   }
 
-  .header img {
-    width: 80px;
-    margin-bottom: 14px;
-    filter: drop-shadow(0 2px 8px rgba(0,0,0,0.4));
-  }
-
   .header h1 {
     font-size: 1.5rem;
     font-weight: 700;
     letter-spacing: 1px;
     color: #fff;
     text-transform: uppercase;
+    margin-top: 14px;
   }
 
   .header p {
@@ -90,24 +85,9 @@
     pointer-events: none;
   }
 
-  .card-icon {
-    font-size: 3rem;
-    margin-bottom: 18px;
-    display: block;
-  }
-
-  .card h2 {
-    font-size: 1rem;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    margin-bottom: 8px;
-  }
-
-  .card p {
-    font-size: 0.78rem;
-    color: #a0b8d0;
-    line-height: 1.5;
-  }
+  .card-icon { font-size: 3rem; margin-bottom: 18px; display: block; }
+  .card h2 { font-size: 1rem; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 8px; }
+  .card p { font-size: 0.78rem; color: #a0b8d0; line-height: 1.5; }
 
   .badge {
     display: inline-block;
@@ -121,8 +101,8 @@
     color: #fff;
   }
 
-  .card-docs  { --accent: #27ae60; }
-  .card-memo  { --accent: #e67e22; }
+  .card-docs { --accent: #27ae60; }
+  .card-memo { --accent: #e67e22; }
 
   .footer {
     margin-top: 56px;
@@ -135,7 +115,6 @@
 <body>
 
 <div class="header">
-  <!-- Logo ENEE en base64 o texto como fallback -->
   <svg width="70" height="70" viewBox="0 0 70 70" xmlns="http://www.w3.org/2000/svg">
     <circle cx="35" cy="35" r="34" fill="none" stroke="#c9a227" stroke-width="2"/>
     <text x="35" y="42" text-anchor="middle" font-size="18" font-weight="bold" fill="#c9a227" font-family="serif">ENEE</text>
@@ -146,7 +125,6 @@
 
 <div class="cards">
 
-  <!-- Control de Documentos -->
   <a href="DDH.html" class="card card-docs">
     <span class="card-icon">📂</span>
     <h2>Control de Documentos</h2>
@@ -154,8 +132,7 @@
     <span class="badge">Disponible</span>
   </a>
 
-  <!-- Control de Memorandos -->
-  <a href="Memorandos.html" class="card card-memo disabled" id="cardMemo">
+  <a href="Memorandos.html" class="card card-memo disabled">
     <span class="card-icon">📝</span>
     <h2>Control de Memorandos</h2>
     <p>Registro y Control de Memorandos</p>
