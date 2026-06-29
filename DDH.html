@@ -448,7 +448,7 @@ let activeStatFilter = null;
 // ═══════════════════════════════════════════════════════════
 // CONFIGURACIÓN GOOGLE SHEETS  ─ pegar URL del Apps Script
 // ═══════════════════════════════════════════════════════════
-const GS_URL = 'https://script.google.com/macros/s/AKfycbypjXhRXUnZDJ4Iacl1aJBjjr7bcBtyi-9Iihr0ny4ra0BZFas1-FXFjD0J26T3N-7S/exec';
+const GS_URL = 'https://script.google.com/macros/s/AKfycbwrwSClK8mvW4GYKs-5XP2ruXDMiGSlfP7tTHqgvq-maOtxgNINmTFIHwnAZ4JzGfC2/exec';
 // Ejemplo: 'https://script.google.com/macros/s/XXXXXXXX/exec'
 // Si está vacío, funciona en modo local (localStorage)
 
@@ -1146,20 +1146,55 @@ function exportLog() {
 }
 
 // ─── GESTIÓN DE USUARIOS ───
+// ─── USUARIOS: localStorage + Google Sheets ─────────────────
 function getUsers() {
   try {
     const saved = localStorage.getItem('ddh_users');
     if(saved) return JSON.parse(saved);
   } catch(e){}
-  return JSON.parse(JSON.stringify(USERS)); // clone default
+  return JSON.parse(JSON.stringify(USERS));
 }
 function saveUsers(users) {
   localStorage.setItem('ddh_users', JSON.stringify(users));
+  if (!GS_URL) return;
+  // Guardar usuarios en Sheets via POST en background
+  fetch(GS_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'setUsers', users })
+  }).catch(() => {});
 }
 function initUsers() {
-  if(!localStorage.getItem('ddh_users')) {
-    localStorage.setItem('ddh_users', JSON.stringify(USERS));
+  if (!GS_URL) {
+    if(!localStorage.getItem('ddh_users')) {
+      localStorage.setItem('ddh_users', JSON.stringify(USERS));
+    }
+    return;
   }
+  // Cargar usuarios desde Sheets
+  jsonpCall({ action: 'getUsers' }, (resp) => {
+    if (resp && resp.ok && resp.users && Object.keys(resp.users).length > 0) {
+      localStorage.setItem('ddh_users', JSON.stringify(resp.users));
+    } else {
+      // Sheets vacío: subir usuarios locales
+      if(!localStorage.getItem('ddh_users')) {
+        localStorage.setItem('ddh_users', JSON.stringify(USERS));
+      }
+      const users = getUsers();
+      fetch(GS_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'setUsers', users })
+      }).catch(() => {});
+    }
+    renderUsers();
+  }, () => {
+    if(!localStorage.getItem('ddh_users')) {
+      localStorage.setItem('ddh_users', JSON.stringify(USERS));
+    }
+  });
 }
 
 function renderUsers() {
