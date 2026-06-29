@@ -504,8 +504,10 @@ function loadData() {
     if (resp && resp.ok && Array.isArray(resp.data) && resp.data.length > 0) {
       // Normalizar fechas que vienen del Sheets como strings largos
       const dateCols = ['FECHA DE INGRESO','FECHA DE ENTREGA'];
-      allData = resp.data.map(r => {
+      allData = resp.data.map((r, i) => {
         const nr = {...r};
+        // Normalizar _id a número entero
+        nr._id = r._id ? parseInt(r._id) : (i + 1);
         dateCols.forEach(col => {
           const v = nr[col];
           if(v && v.includes(' ') && v.length > 10) {
