@@ -441,8 +441,12 @@ function doLogin(){
   if(!pass){errEl.textContent='Ingrese su contrasena.';errEl.style.display='block';return;}
   errEl.style.display='none';
   var u=null;
-  USUARIOS.forEach(function(x){if(x.id===uid&&x.pass===pass.trim()) u=x;});
-  if(!u){errEl.textContent='Usuario o contrasena incorrectos.';errEl.style.display='block';return;}
+  var uidTrim=uid.trim();
+  var passTrim=pass.trim();
+  USUARIOS.forEach(function(x){
+    if(x.id.trim()===uidTrim && x.pass.trim()===passTrim) u=x;
+  });
+  if(!u){errEl.textContent='Usuario o contrasena incorrectos. (ID: '+uidTrim+')';errEl.style.display='block';return;}
   errEl.style.display='none';
     usuarioActual=u;
     document.getElementById('hdr-nombre').textContent=u.nombre;
