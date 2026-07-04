@@ -455,7 +455,7 @@ const GS_URL = 'https://script.google.com/macros/s/AKfycbwrwSClK8mvW4GYKs-5XP2ru
 // ─── JSONP helper ───────────────────────────────────────────
 function jsonpCall(params, callback, errCallback) {
   if (!GS_URL) { if(errCallback) errCallback('sin_url'); return; }
-  const cbName = 'ddh_cb_' + Date.now();
+  const cbName = 'ddh_cb_' + Date.now() + '_' + (jsonpCall._n = (jsonpCall._n||0) + 1);
   const url = GS_URL + '?' + Object.entries(params).map(([k,v])=>k+'='+encodeURIComponent(typeof v==='object'?JSON.stringify(v):v)).join('&') + '&callback=' + cbName;
   const script = document.createElement('script');
   const timer = setTimeout(() => { cleanup(); if(errCallback) errCallback('timeout'); }, 20000);
@@ -500,17 +500,23 @@ function addLog(tipo, desc) {
 function loadData() {
   if (!GS_URL) { loadDataLocal(); finishLoad(); return; }
   setSyncStatus('⏳ Cargando desde servidor...', '#e67e22');
+  // Respaldar datos locales ANTES de sobrescribirlos, por si hay ediciones offline
+  const prevLocal = (() => { try { return JSON.parse(localStorage.getItem('ddh_data')||'[]'); } catch(e){ return []; } })();
   jsonpCall({ action: 'getData' }, (resp) => {
     if (resp && resp.ok && Array.isArray(resp.data) && resp.data.length > 0) {
+      if (prevLocal.length > resp.data.length) {
+        localStorage.setItem('ddh_data_backup', JSON.stringify(prevLocal));
+      }
       // Normalizar fechas que vienen del Sheets como strings largos
       const dateCols = ['FECHA DE INGRESO','FECHA DE ENTREGA'];
       allData = resp.data.map((r, i) => {
         const nr = {...r};
-        // Normalizar _id a número entero
-        nr._id = r._id ? parseInt(r._id) : (i + 1);
+        // Normalizar _id a número entero (evitar NaN)
+        const pid = parseInt(r._id);
+        nr._id = (!isNaN(pid) && pid > 0) ? pid : null;
         dateCols.forEach(col => {
           const v = nr[col];
-          if(v && v.includes(' ') && v.length > 10) {
+          if(typeof v === 'string' && v.includes(' ') && v.length > 10) {
             try {
               const d = new Date(v);
               if(!isNaN(d)) nr[col] = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -519,11 +525,14 @@ function loadData() {
         });
         return nr;
       });
+      // Asignar IDs faltantes sin duplicar los existentes
+      let maxId = Math.max(0, ...allData.map(r => (typeof r._id==='number' && !isNaN(r._id)) ? r._id : 0));
+      allData.forEach(r => { if(r._id === null || r._id === undefined || isNaN(r._id)) r._id = ++maxId; });
       localStorage.setItem('ddh_data', JSON.stringify(allData));
       setSyncStatus('✅ Sincronizado · ' + new Date().toLocaleTimeString('es-HN'), '#27ae60');
       finishLoad();
-    } else {
-      // Servidor vacío o con pocos datos: cargar DATA_INICIAL y subir al servidor
+    } else if (resp && resp.ok && Array.isArray(resp.data) && resp.data.length === 0) {
+      // Servidor confirmado VACÍO: cargar DATA_INICIAL y subir al servidor
       setSyncStatus('⏳ Inicializando servidor...', '#8e44ad');
       allData = DATA_INICIAL.map((r,i) => ({...r, _id: i+1}));
       allData.sort((a,b)=>{
@@ -542,6 +551,11 @@ function loadData() {
       }).catch(() => {
         setSyncStatus('⚠ No se pudo subir al servidor', '#e74c3c');
       });
+      finishLoad();
+    } else {
+      // Respuesta inválida del servidor: NO sobrescribir la hoja, usar modo local
+      setSyncStatus('⚠ Respuesta inválida del servidor · modo local', '#e74c3c');
+      loadDataLocal();
       finishLoad();
     }
   }, () => {
@@ -572,8 +586,9 @@ function finishLoad() {
 
 function checkUploadNeeded() {
   if (!GS_URL) return;
-  const local = JSON.parse(localStorage.getItem('ddh_data') || '[]');
-  // Si hay más datos locales que en el servidor, mostrar botón de subida
+  let local = [];
+  try { local = JSON.parse(localStorage.getItem('ddh_data_backup') || '[]'); } catch(e){}
+  // Si hay un respaldo local con más registros que el servidor, ofrecer subirlo
   if (local.length > allData.length) {
     const btn = document.getElementById('btnUpload');
     if (btn) {
@@ -587,7 +602,8 @@ function checkUploadNeeded() {
 }
 
 function uploadLocalData() {
-  const local = JSON.parse(localStorage.getItem('ddh_data') || '[]');
+  let local = [];
+  try { local = JSON.parse(localStorage.getItem('ddh_data_backup') || localStorage.getItem('ddh_data') || '[]'); } catch(e){}
   if (local.length === 0) { alert('No hay datos locales para subir.'); return; }
   if (!confirm('¿Subir ' + local.length + ' registros locales al servidor? Esto reemplazará los datos actuales en Google Sheets.')) return;
   allData = local;
@@ -599,6 +615,8 @@ function uploadLocalData() {
     body: JSON.stringify({ action: 'setData', data: allData })
   }).then(() => {
     setSyncStatus('✅ ' + local.length + ' registros subidos · ' + new Date().toLocaleTimeString('es-HN'), '#27ae60');
+    localStorage.setItem('ddh_data', JSON.stringify(allData));
+    localStorage.removeItem('ddh_data_backup');
     const btn = document.getElementById('btnUpload');
     if (btn) btn.style.display = 'none';
     addLog('upload', 'Subió ' + local.length + ' registros locales al servidor');
@@ -632,10 +650,27 @@ function doLogin() {
   const pass  = document.getElementById('loginPass').value;
   const errEl = document.getElementById('loginError');
   if(!uKey){ errEl.textContent='Ingrese el usuario.'; return; }
-  initUsers();
-  const allUsers = getUsers();
-  const u = allUsers[uKey];
+  let allUsers = getUsers();
+  let u = allUsers[uKey];
+  // Si el usuario no existe localmente, intentar traer usuarios del servidor
+  // (evita que usuarios creados en otra PC no puedan entrar la primera vez)
+  if(!u && GS_URL) {
+    errEl.textContent = '⏳ Verificando usuario en el servidor...';
+    jsonpCall({ action:'getUsers' }, (resp) => {
+      if (resp && resp.ok && resp.users && Object.keys(resp.users).length > 0) {
+        localStorage.setItem('ddh_users', JSON.stringify(resp.users));
+      }
+      const u2 = getUsers()[uKey];
+      if(!u2 || pass !== u2.pass){ errEl.textContent='Usuario o contraseña incorrectos.'; return; }
+      completeLogin(uKey, u2);
+    }, () => { errEl.textContent='Usuario o contraseña incorrectos (sin conexión al servidor).'; });
+    return;
+  }
   if(!u || pass !== u.pass){ errEl.textContent='Usuario o contraseña incorrectos.'; return; }
+  completeLogin(uKey, u);
+}
+function completeLogin(uKey, u) {
+  const errEl = document.getElementById('loginError');
   currentUser = { key: uKey, ...u };
   errEl.textContent='';
   document.getElementById('loginPass').value='';
@@ -677,9 +712,9 @@ function showPanel(id, tabEl) {
 // ─── FILTROS ───
 function populateResponsableFilter() {
   const sel = document.getElementById('filtResponsable');
-  const vals = [...new Set(allData.map(r=>r.RESPONSABLE).filter(v=>v&&v.trim()))].sort();
+  const vals = [...new Set(allData.map(r=>String(r.RESPONSABLE||'').trim()).filter(v=>v))].sort();
   sel.innerHTML = '<option value="">Todos los responsables</option>' +
-    vals.map(v=>`<option value="${v}">${v}</option>`).join('');
+    vals.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join('');
 }
 
 function toggleStatFilter(filter) {
@@ -716,10 +751,10 @@ function applyFilters() {
   const resp = document.getElementById('filtResponsable').value.toUpperCase();
   filteredData = allData.filter(r => {
     if(q && !['ASUNTO','ORIGEN','NUMERO DE DOCUMENTO','RESPONSABLE','DESCRIPCIÓN','DESCRIPCIÓN.1','OBSERVACIONES','HOJA DE INSTRUCCIÓN','MEMORANDO','EXTERNO','Dirigido a:']
-      .some(k=>(r[k]||'').toLowerCase().includes(q))) return false;
-    if(est && (r.ESTADO||'').toUpperCase().replace(/\s+/g,' ').trim() !== est) return false;
-    if(prio && (r.PRIORIDAD||'').toUpperCase().trim() !== prio) return false;
-    if(resp && (r.RESPONSABLE||'').toUpperCase() !== resp) return false;
+      .some(k=>String(r[k]||'').toLowerCase().includes(q))) return false;
+    if(est && String(r.ESTADO||'').toUpperCase().replace(/\s+/g,' ').trim() !== est) return false;
+    if(prio && String(r.PRIORIDAD||'').toUpperCase().trim() !== prio) return false;
+    if(resp && String(r.RESPONSABLE||'').toUpperCase() !== resp) return false;
     return true;
   });
   sortData();
@@ -742,14 +777,14 @@ function sortData() {
 
 // ─── RENDER TABLA ───
 function estadoBadge(e) {
-  const s = (e||'').toUpperCase().trim();
+  const s = String(e||'').toUpperCase().trim();
   if(s==='FINALIZADO') return `<span class="badge badge-fin">✔ Finalizado</span>`;
   if(s==='PENDIENTE') return `<span class="badge badge-pen">⏳ Pendiente</span>`;
   if(s==='ESPERANDO RESPUESTA') return `<span class="badge badge-esp">🔄 Esperando</span>`;
   return `<span class="badge badge-vacio">${e||'—'}</span>`;
 }
 function prioBadge(p) {
-  const s = (p||'').toUpperCase().trim();
+  const s = String(p||'').toUpperCase().trim();
   if(s==='ALTA') return `<span class="badge badge-alta">🔴 ALTA</span>`;
   if(s==='MEDIA') return `<span class="badge badge-media">🟡 MEDIA</span>`;
   if(s==='BAJA') return `<span class="badge badge-baja">🟢 BAJA</span>`;
@@ -757,6 +792,7 @@ function prioBadge(p) {
 }
 
 function renderTable() {
+  if(!currentUser) return;
   const tbody = document.getElementById('tableBody');
   const total = filteredData.length;
   const totalPages = Math.max(1, Math.ceil(total/PER_PAGE));
@@ -820,10 +856,10 @@ function updateStats() {
   // Conteos siempre sobre allData completo (sin importar filtro activo)
   const base = allData;
   const total = filteredData.length; // este sí muestra el filtrado
-  const fin   = base.filter(r=>(r.ESTADO||'').toUpperCase().includes('FINALIZ')).length;
-  const pen   = base.filter(r=>(r.ESTADO||'').toUpperCase().includes('PENDIENTE')).length;
-  const esp   = base.filter(r=>(r.ESTADO||'').toUpperCase().includes('ESPERANDO')).length;
-  const alta  = base.filter(r=>(r.PRIORIDAD||'').toUpperCase().trim()==='ALTA').length;
+  const fin   = base.filter(r=>String(r.ESTADO||'').toUpperCase().includes('FINALIZ')).length;
+  const pen   = base.filter(r=>String(r.ESTADO||'').toUpperCase().includes('PENDIENTE')).length;
+  const esp   = base.filter(r=>String(r.ESTADO||'').toUpperCase().includes('ESPERANDO')).length;
+  const alta  = base.filter(r=>String(r.PRIORIDAD||'').toUpperCase().trim()==='ALTA').length;
 
   const cards = [
     { label: total === base.length ? `Total registros` : `Mostrando ${total} de ${base.length}`,
@@ -850,11 +886,11 @@ function buildStats() {
   // Por responsable
   const byResp = {};
   allData.forEach(r=>{
-    const k=(r.RESPONSABLE||'Sin asignar').trim()||'Sin asignar';
+    const k=String(r.RESPONSABLE||'Sin asignar').trim()||'Sin asignar';
     if(!byResp[k]) byResp[k]={total:0,fin:0,pen:0};
     byResp[k].total++;
-    if((r.ESTADO||'').toUpperCase().includes('FINALIZ')) byResp[k].fin++;
-    if((r.ESTADO||'').toUpperCase().includes('PENDIENTE')) byResp[k].pen++;
+    if(String(r.ESTADO||'').toUpperCase().includes('FINALIZ')) byResp[k].fin++;
+    if(String(r.ESTADO||'').toUpperCase().includes('PENDIENTE')) byResp[k].pen++;
   });
   document.getElementById('statsResp').innerHTML = Object.entries(byResp)
     .sort((a,b)=>b[1].total-a[1].total)
@@ -864,7 +900,7 @@ function buildStats() {
   // Por mes
   const byMes = {};
   allData.forEach(r=>{
-    const fv=r['FECHA DE INGRESO']||'';
+    const fv=String(r['FECHA DE INGRESO']||'');
     let m='Sin fecha';
     if(fv) {
       const dm=fv.match(/^\d{1,2}\/(\d{1,2})\/(\d{4})/);
@@ -882,7 +918,7 @@ function buildStats() {
   // Por prioridad
   const byPrio = {ALTA:0,MEDIA:0,BAJA:0,'Sin definir':0};
   allData.forEach(r=>{
-    const p=(r.PRIORIDAD||'').toUpperCase().trim();
+    const p=String(r.PRIORIDAD||'').toUpperCase().trim();
     if(p==='ALTA') byPrio.ALTA++;
     else if(p==='MEDIA') byPrio.MEDIA++;
     else if(p==='BAJA') byPrio.BAJA++;
@@ -895,8 +931,8 @@ function buildStats() {
 
   // Pendientes por responsable
   const pend = {};
-  allData.filter(r=>(r.ESTADO||'').toUpperCase().includes('PENDIENTE')).forEach(r=>{
-    const k=(r.RESPONSABLE||'Sin asignar').trim()||'Sin asignar';
+  allData.filter(r=>String(r.ESTADO||'').toUpperCase().includes('PENDIENTE')).forEach(r=>{
+    const k=String(r.RESPONSABLE||'Sin asignar').trim()||'Sin asignar';
     pend[k]=(pend[k]||0)+1;
   });
   document.getElementById('statsPend').innerHTML = Object.entries(pend)
@@ -959,6 +995,8 @@ function openAdd() {
 
 // ─── UTILIDADES DE FECHA ───
 function fmtDate(val) {
+  if(val === 0) return '—';
+  val = (val===null||val===undefined) ? '' : String(val);
   if(!val || val==='NaT' || val==='nan' || val==='None') return '—';
   if(/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(val)) return val;
   // YYYY-MM-DD format
@@ -974,6 +1012,7 @@ function fmtDate(val) {
   return val;
 }
 function toIsoDate(val) {
+  val = (val===null||val===undefined) ? '' : String(val);
   if(!val) return '';
   if(/^\d{4}-\d{2}-\d{2}$/.test(val)) return val;
   const m = val.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
@@ -1006,7 +1045,7 @@ function buildForm(r) {
     <div class="form-group">
       <label>${label}</label>
       <select id="f_${k.replace(/[^a-zA-Z0-9]/g,'_')}">
-        ${opts.map(o=>`<option value="${o}" ${(r[k]||'').toUpperCase().trim()===o?'selected':''}>${o}</option>`).join('')}
+        ${opts.map(o=>`<option value="${o}" ${String(r[k]||'').toUpperCase().trim()===o?'selected':''}>${o}</option>`).join('')}
       </select>
     </div>`;
   const ta = (k,label) => `
@@ -1071,10 +1110,10 @@ function saveEdit(id) {
 
 function saveAdd() {
   const vals = getFormValues();
-  const newId = Math.max(0,...allData.map(r=>r._id||0)) + 1;
+  const newId = Math.max(0, ...allData.map(r => { const n = parseInt(r._id); return isNaN(n) ? 0 : n; })) + 1;
   allData.unshift({...vals, _id: newId, 'Unnamed: 15':''});
   saveData();
-  addLog('add', `Agregó nuevo registro ID ${newId} · Doc: ${vals['NUMERO DE DOCUMENTO']} · Asunto: ${vals['ASUNTO'].slice(0,60)}`);
+  addLog('add', `Agregó nuevo registro ID ${newId} · Doc: ${vals['NUMERO DE DOCUMENTO']||'S/N'} · Asunto: ${String(vals['ASUNTO']||'').slice(0,60)}`);
   closeModal(); populateResponsableFilter(); applyFilters();
   alert('✅ Registro agregado correctamente.');
 }
@@ -1082,10 +1121,10 @@ function saveAdd() {
 function delRow(id) {
   const r = allData.find(x=>String(x._id)===String(id));
   if(!r) return;
-  if(!confirm(`¿Eliminar el documento "${r['NUMERO DE DOCUMENTO']}"?\n${r['ASUNTO'].slice(0,80)}\n\nEsta acción quedará registrada en bitácora.`)) return;
+  if(!confirm(`¿Eliminar el documento "${r['NUMERO DE DOCUMENTO']||'S/N'}"?\n${String(r['ASUNTO']||'').slice(0,80)}\n\nEsta acción quedará registrada en bitácora.`)) return;
   allData = allData.filter(x=>String(x._id)!==String(id));
   saveData();
-  addLog('del', `Eliminó registro ID ${id} · Doc: ${r['NUMERO DE DOCUMENTO']} · Asunto: ${r['ASUNTO'].slice(0,60)}`);
+  addLog('del', `Eliminó registro ID ${id} · Doc: ${r['NUMERO DE DOCUMENTO']||'S/N'} · Asunto: ${String(r['ASUNTO']||'').slice(0,60)}`);
   applyFilters();
 }
 
@@ -1095,6 +1134,9 @@ function closeModal() { document.getElementById('modalOverlay').classList.remove
 document.getElementById('modalOverlay').addEventListener('click', function(e){
   if(e.target===this) closeModal();
 });
+
+// Sincronizar usuarios desde el servidor al abrir la página (antes del login)
+initUsers();
 
 // ─── BITÁCORA ───
 function renderLog() {
@@ -1106,7 +1148,7 @@ function renderLog() {
   const users = [...new Set(log.map(l=>l.user))].sort();
   const selU = document.getElementById('logFiltUser');
   const curVal = selU.value;
-  selU.innerHTML = '<option value="">Todos los usuarios</option>' + users.map(u=>`<option value="${u}">${u}</option>`).join('');
+  selU.innerHTML = '<option value="">Todos los usuarios</option>' + users.map(u=>`<option value="${esc(u)}">${esc(u)}</option>`).join('');
   selU.value = curVal;
 
   const filtered = log.filter(l=>{
@@ -1123,8 +1165,8 @@ function renderLog() {
   document.getElementById('logContainer').innerHTML = filtered.map(l=>{
     const icons = {login:'🔑',logout:'🚪',edit:'✏',add:'➕',del:'🗑'};
     return `<div class="log-entry log-${l.tipo}">
-      <div><span class="log-user">${l.user}</span> <span class="badge badge-vacio">${l.role}</span>
-        ${icons[l.tipo]||'•'} ${l.desc}</div>
+      <div><span class="log-user">${esc(l.user)}</span> <span class="badge badge-vacio">${esc(l.role)}</span>
+        ${icons[l.tipo]||'•'} ${esc(l.desc)}</div>
       <div class="log-time">${l.ts}</div>
     </div>`;
   }).join('');
@@ -1133,7 +1175,7 @@ function renderLog() {
 function clearLog() {
   if(!confirm('¿Limpiar toda la bitácora? Esta acción no se puede deshacer.')) return;
   localStorage.removeItem('ddh_bitacora');
-  addLog('login','Bitácora limpiada por el administrador');
+  addLog('del','Bitácora limpiada por el administrador');
   renderLog();
 }
 
@@ -1204,9 +1246,9 @@ function renderUsers() {
   const tbody = document.getElementById('usersBody');
   tbody.innerHTML = Object.entries(users).map(([key, u]) => `
     <tr>
-      <td><b>${key}</b></td>
-      <td>${u.name}</td>
-      <td>${u.role}</td>
+      <td><b>${esc(key)}</b></td>
+      <td>${esc(u.name)}</td>
+      <td>${esc(u.role)}</td>
       <td style="white-space:nowrap">
         <button class="btn btn-warn btn-sm" onclick="openEditUser('${key}')">✏ Editar</button>
         ${key !== currentUser.key ? `<button class="btn btn-danger btn-sm" onclick="deleteUser('${key}')">🗑 Eliminar</button>` : ''}
@@ -1226,6 +1268,7 @@ function openAddUser() {
 function openEditUser(key) {
   const users = getUsers();
   const u = users[key];
+  if(!u) { alert('Usuario no encontrado.'); return; }
   document.getElementById('modalTitle').textContent = '✏ Editar Usuario';
   document.getElementById('modalBody').innerHTML = buildUserForm(u, key);
   document.getElementById('modalActions').innerHTML = `
@@ -1252,7 +1295,7 @@ function buildUserForm(u, key) {
     <div class="form-group">
       <label>Rol</label>
       <select id="fu_role" class="role-select">
-        ${roles.map(r=>`<option value="${r}" ${(u.role||''===r)?'selected':''}>${r}</option>`).join('')}
+        ${roles.map(r=>`<option value="${r}" ${(u.role||'')===r?'selected':''}>${r}</option>`).join('')}
       </select>
     </div>
   </div>`;
@@ -1300,8 +1343,9 @@ function deleteUser(key) {
 
 // ─── EXPORTAR A EXCEL ───
 function exportToExcel() {
-  // Usar los datos actualmente filtrados (filteredData) o todos si no existe
-  const datos = (typeof filteredData !== 'undefined' && filteredData.length > 0) ? filteredData : allData;
+  // Usar los datos actualmente visibles (filtrados)
+  const datos = Array.isArray(filteredData) ? filteredData : allData;
+  if(datos.length === 0) { alert('No hay registros para exportar con los filtros actuales.'); return; }
 
   const encabezados = [
     '#',
