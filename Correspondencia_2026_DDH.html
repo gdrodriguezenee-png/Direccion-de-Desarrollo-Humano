@@ -638,6 +638,14 @@ function render(){
 }
 
 /* ===================== MODAL DOCUMENTO ===================== */
+function fechaHoy(){
+  var d=new Date();
+  return ('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)+'/'+String(d.getFullYear()).slice(2);
+}
+function fechaHoyISO(){
+  var d=new Date();
+  return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);
+}
 function abrirModal(){
   editIdx=null; editNo=null;
   var t=getTipo(tipoActual);
@@ -647,7 +655,9 @@ function abrirModal(){
   document.getElementById('m-resp').value=usuarioActual?usuarioActual.nombre:'';
   document.getElementById('m-asunto').value='';
   document.getElementById('m-obs').value='';
-  document.getElementById('m-fecha').value='';
+  // Fecha de hoy por defecto (editable)
+  document.getElementById('m-fecha').value=fechaHoy();
+  document.getElementById('m-fecha-picker').value=fechaHoyISO();
   // Calcular siguiente N
   obtenerSiguienteNo(tipoActual,function(n){ document.getElementById('m-no').value=n; });
   document.getElementById('modal-doc').classList.add('show');
@@ -669,6 +679,9 @@ function editarDoc(no){
   document.getElementById('m-asunto').value=d.asunto;
   document.getElementById('m-obs').value=d.obs||'';
   document.getElementById('m-fecha').value=d.fecha;
+  // Sincronizar el selector de calendario con la fecha del registro (dd/mm/aa)
+  var mF=String(d.fecha||'').match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  document.getElementById('m-fecha-picker').value = mF ? ((mF[3].length===2?'20'+mF[3]:mF[3])+'-'+('0'+mF[2]).slice(-2)+'-'+('0'+mF[1]).slice(-2)) : '';
   document.getElementById('modal-doc').classList.add('show');
 }
 
