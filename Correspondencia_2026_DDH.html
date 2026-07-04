@@ -307,6 +307,43 @@ var sortAsc = false;
 var guardandoAhora = false;
 var reloadTimer = null;
 var dataCargadaDeSheets = false;
+var pendientes = []; // operaciones que fallaron al enviarse a Sheets (se reintentan)
+
+/* Re-aplica localmente las operaciones pendientes para que el auto-reload no las borre */
+function aplicarPendientesLocal(tipo){
+  pendientes.forEach(function(p){
+    if(p.tipo!==tipo) return;
+    var arr = DB[tipo]||[];
+    var pl = p.payload;
+    var i = -1;
+    for(var k=0;k<arr.length;k++){ if(Number(arr[k].no)===Number(pl.no)){ i=k; break; } }
+    if(pl.accion==='agregar'){
+      if(i===-1) arr.push({no:pl.no,remite:pl.remite,resp:pl.resp,fecha:pl.fecha,asunto:pl.asunto,obs:pl.obs,nueva:true});
+    } else if(pl.accion==='editar'){
+      var obj = {no:pl.no,remite:pl.remite,resp:pl.resp,fecha:pl.fecha,asunto:pl.asunto,obs:pl.obs};
+      if(i>=0) arr[i]=obj; else arr.push(obj);
+    } else if(pl.accion==='eliminar'){
+      if(i>=0) arr.splice(i,1);
+    }
+  });
+}
+
+/* Reintenta enviar las operaciones pendientes una por una */
+function reenviarPendientes(){
+  if(!pendientes.length) return;
+  var p = pendientes[0];
+  apiPost(p.payload, function(err,res){
+    if(!err && res && res.ok){
+      pendientes.shift();
+      syncStatus('ok','Sincronizado');
+      toast('Cambio pendiente sincronizado con Sheets');
+      if(pendientes.length) reenviarPendientes();
+      else cargarDatosSheets(true);
+    } else {
+      syncStatus('err', pendientes.length+' cambio(s) sin sincronizar');
+    }
+  });
+}
 
 /* ===================== UTILIDADES ===================== */
 function showLoad(txt){ document.getElementById('load-txt').textContent=txt||'Procesando...'; document.getElementById('loading').classList.add('show'); }
@@ -317,22 +354,25 @@ function getTipo(id){ for(var i=0;i<TIPOS.length;i++){if(TIPOS[i].id===id)return
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 /* ===================== API JSONP ===================== */
+var _jsonpN = 0;
 function apiGet(tipo,cb){
-  var cbName='_gs_'+tipo.replace(/[^a-z]/gi,'')+'_'+Date.now();
+  var cbName='_gs_'+tipo.replace(/[^a-z]/gi,'')+'_'+Date.now()+'_'+(++_jsonpN);
   var s=document.createElement('script'); var done=false;
-  var t=setTimeout(function(){if(!done){done=true;cb(new Error('Timeout'));}delete window[cbName];if(s.parentNode)s.parentNode.removeChild(s);},15000);
-  window[cbName]=function(data){if(!done){done=true;clearTimeout(t);cb(null,data);}delete window[cbName];if(s.parentNode)s.parentNode.removeChild(s);};
-  s.onerror=function(){if(!done){done=true;clearTimeout(t);cb(new Error('Error'));}delete window[cbName];};
+  function limpiar(){ window[cbName]=function(){}; if(s.parentNode)s.parentNode.removeChild(s); }
+  var t=setTimeout(function(){if(!done){done=true;cb(new Error('Timeout'));}limpiar();},15000);
+  window[cbName]=function(data){if(!done){done=true;clearTimeout(t);cb(null,data);}limpiar();};
+  s.onerror=function(){if(!done){done=true;clearTimeout(t);cb(new Error('Error'));}limpiar();};
   s.src=SCRIPT_URL+'?accion=leer&tipo='+tipo+'&callback='+cbName+'&_='+Date.now();
   document.head.appendChild(s);
 }
 
 function apiPost(body,cb){
-  var cbName='_gsp_'+Date.now();
+  var cbName='_gsp_'+Date.now()+'_'+(++_jsonpN);
   var s=document.createElement('script'); var done=false;
-  var t=setTimeout(function(){if(!done){done=true;cb(new Error('Timeout'));}delete window[cbName];if(s.parentNode)s.parentNode.removeChild(s);},15000);
-  window[cbName]=function(data){if(!done){done=true;clearTimeout(t);cb(null,data);}delete window[cbName];if(s.parentNode)s.parentNode.removeChild(s);};
-  s.onerror=function(){if(!done){done=true;clearTimeout(t);cb(new Error('Error'));}delete window[cbName];};
+  function limpiar(){ window[cbName]=function(){}; if(s.parentNode)s.parentNode.removeChild(s); }
+  var t=setTimeout(function(){if(!done){done=true;cb(new Error('Timeout'));}limpiar();},15000);
+  window[cbName]=function(data){if(!done){done=true;clearTimeout(t);cb(null,data);}limpiar();};
+  s.onerror=function(){if(!done){done=true;clearTimeout(t);cb(new Error('Error'));}limpiar();};
   s.src=SCRIPT_URL+'?data='+encodeURIComponent(JSON.stringify(body))+'&callback='+cbName+'&_='+Date.now();
   document.head.appendChild(s);
 }
@@ -374,7 +414,7 @@ function cargarDatosSheets(silencioso){
             if(v===''||v==='no'||v==='n'||v==='n°'||isNaN(Number(r[0]))) return false;
             return true;
           }).map(filaAObj);
-          if(parsed.length > 0){ DB[t.id] = parsed; }
+          if(parsed.length > 0){ DB[t.id] = parsed; aplicarPendientesLocal(t.id); }
         } else errs++;
         pending--;
         if(pending===0){
@@ -446,7 +486,7 @@ function doLogin(){
   USUARIOS.forEach(function(x){
     if(x.id.trim()===uidTrim && x.pass.trim()===passTrim) u=x;
   });
-  if(!u){errEl.textContent='Usuario o contrasena incorrectos. (ID: '+uidTrim+')';errEl.style.display='block';return;}
+  if(!u){errEl.textContent='Usuario o contrasena incorrectos.';errEl.style.display='block';return;}
   errEl.style.display='none';
     usuarioActual=u;
     document.getElementById('hdr-nombre').textContent=u.nombre;
@@ -461,11 +501,20 @@ function doLogin(){
     cargarDatosIniciales();
     cargarDatosSheets(true);
     hideLoad();
-    reloadTimer=setInterval(function(){ if(!guardandoAhora){ try{cargarDatosSheets(true);}catch(e){} } },60000);
+    reloadTimer=setInterval(function(){
+      if(guardandoAhora) return;
+      // No recargar mientras haya un modal abierto (evita perder lo que se esta editando)
+      if(document.getElementById('modal-doc').classList.contains('show')) return;
+      if(document.getElementById('modal-usu').classList.contains('show')) return;
+      try{
+        if(pendientes.length) reenviarPendientes();
+        else cargarDatosSheets(true);
+      }catch(e){}
+    },60000);
 }
 
 function doLogout(){
-  clearInterval(reloadTimer);
+  if(reloadTimer){ clearInterval(reloadTimer); reloadTimer=null; }
   usuarioActual=null;
   document.getElementById('app').style.display='none';
   document.getElementById('login-screen').style.display='flex';
@@ -581,8 +630,8 @@ function render(){
       +'<td class="asunto-cell">'+esc(d.asunto)+'</td>'
       +'<td class="obs-cell">'+obsHtml+'</td>'
       +'<td style="white-space:nowrap;">'
-        +'<button class="btn btn-primary btn-sm" onclick="editarDoc('+idx+')">Editar</button> '
-        +(usuarioActual&&usuarioActual.rol==='admin'?'<button class="btn btn-danger btn-sm" onclick="eliminarDoc('+idx+')">Eliminar</button>':'')
+        +'<button class="btn btn-primary btn-sm" onclick="editarDoc('+Number(d.no)+')">Editar</button> '
+        +(usuarioActual&&usuarioActual.rol==='admin'?'<button class="btn btn-danger btn-sm" onclick="eliminarDoc('+Number(d.no)+')">Eliminar</button>':'')
       +'</td></tr>';
   });
   tbody.innerHTML=html;
@@ -604,9 +653,12 @@ function abrirModal(){
   document.getElementById('modal-doc').classList.add('show');
 }
 
-function editarDoc(idx){
-  var d=(DB[tipoActual]||[])[idx];
-  if(!d) return;
+function editarDoc(no){
+  var arr=(DB[tipoActual]||[]);
+  var idx=-1;
+  for(var k=0;k<arr.length;k++){ if(Number(arr[k].no)===Number(no)){ idx=k; break; } }
+  var d=arr[idx];
+  if(!d){ toast('Registro no encontrado, recargue la pagina','warn'); return; }
   editIdx=idx; editNo=d.no;
   var t=getTipo(tipoActual);
   document.getElementById('m-icon').innerHTML=t.icon;
@@ -655,8 +707,17 @@ function guardar(){
   showLoad('Guardando...');
   var obj={no:no,remite:remite,resp:resp,fecha:fecha,asunto:asunto,obs:obs,nueva:true};
   if(editIdx!==null){
-    DB[tipoActual][editIdx]=obj;
+    // Buscar por N° en lugar de confiar en el indice (el array pudo cambiar por una recarga)
+    var iEd=-1;
+    for(var k=0;k<DB[tipoActual].length;k++){ if(Number(DB[tipoActual][k].no)===Number(editNo)){ iEd=k; break; } }
+    if(iEd>=0) DB[tipoActual][iEd]=obj; else DB[tipoActual].push(obj);
   } else {
+    if(!no || no<=0){
+      // Recalcular N° si el campo quedo vacio o invalido
+      var maxN=0;
+      DB[tipoActual].forEach(function(d){ var n=Number(d.no)||0; if(n>maxN)maxN=n; });
+      no=maxN+1; obj.no=no;
+    }
     DB[tipoActual].push(obj);
   }
   // Enviar a Sheets
@@ -664,18 +725,28 @@ function guardar(){
   var payload={accion:accion,tipo:tipoActual,no:no,remite:remite,resp:resp,fecha:fecha,asunto:asunto,obs:obs,usuario:usuarioActual?usuarioActual.nombre:'?'};
   apiPost(payload,function(err,res){
     guardandoAhora=false; hideLoad();
-    if(!err&&res&&res.ok){ syncStatus('ok','Sincronizado'); toast(editIdx!==null?'Registro actualizado':'Registro guardado'); }
-    else { syncStatus('err','Error al guardar (guardado local)'); toast('Guardado localmente - sin conexion','warn'); }
+    if(!err&&res&&res.ok){
+      syncStatus('ok','Sincronizado'); toast(accion==='editar'?'Registro actualizado':'Registro guardado');
+      setTimeout(function(){ for(var tid in DB){ (DB[tid]||[]).forEach(function(d){ delete d.nueva; }); } render(); }, 6000);
+    }
+    else {
+      pendientes.push({tipo:payload.tipo, payload:payload});
+      syncStatus('err','Sin conexion - '+pendientes.length+' cambio(s) pendiente(s)');
+      toast('Sin conexion: el registro se reintentara automaticamente','warn');
+    }
     actualizarTabs(); poblarResp(); render();
   });
   cerrarModal(); editIdx=null; editNo=null;
 }
 
 /* ===================== ELIMINAR ===================== */
-function eliminarDoc(idx){
-  var d=(DB[tipoActual]||[])[idx];
-  if(!d) return;
-  if(!confirm('Eliminar el registro N '+d.no+' - '+d.asunto+'?')) return;
+function eliminarDoc(no){
+  var arr=(DB[tipoActual]||[]);
+  var idx=-1;
+  for(var k=0;k<arr.length;k++){ if(Number(arr[k].no)===Number(no)){ idx=k; break; } }
+  var d=arr[idx];
+  if(!d){ toast('Registro no encontrado, recargue la pagina','warn'); return; }
+  if(!confirm('Eliminar el registro N '+d.no+' - '+(d.asunto||'(sin asunto)')+'?')) return;
   guardandoAhora=true;
   showLoad('Eliminando...');
   DB[tipoActual].splice(idx,1);
@@ -683,7 +754,11 @@ function eliminarDoc(idx){
   apiPost(payload,function(err,res){
     guardandoAhora=false; hideLoad();
     if(!err&&res&&res.ok){ syncStatus('ok','Sincronizado'); toast('Registro eliminado'); }
-    else { syncStatus('err','Sin conexion'); toast('Eliminado localmente','warn'); }
+    else {
+      pendientes.push({tipo:payload.tipo, payload:payload});
+      syncStatus('err','Sin conexion - '+pendientes.length+' cambio(s) pendiente(s)');
+      toast('Sin conexion: la eliminacion se reintentara automaticamente','warn');
+    }
     actualizarTabs(); poblarResp(); render();
   });
 }
@@ -703,7 +778,7 @@ function exportarCSV(){
     }).join(';'));
   });
   // BOM UTF-8 para que Excel abra los acentos bien
-  var bom='﻿';
+  var bom='\uFEFF';
   var blob=new Blob([bom+rows.join('\n')],{type:'text/csv;charset=utf-8;'});
   var url=URL.createObjectURL(blob);
   var a=document.createElement('a');
