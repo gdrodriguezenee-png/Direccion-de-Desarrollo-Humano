@@ -9,6 +9,23 @@
 :root{--azul:#003366;--azul-med:#005599;--azul-claro:#e8f0f8;--acento:#f0a500;
 --bg:#f0f3f8;--blanco:#fff;--gris1:#dde3ed;--gris2:#8899aa;--texto:#1a2a3a;
 --raya:#c8d4e4;--rojo:#cc2233;--verde:#1a7a44;}
+.no-estado{margin-top:5px;font-size:11px;font-weight:600;line-height:1.35;}
+.no-estado.ok{color:#1a7a44;}
+.no-estado.warn{color:#b06000;}
+.no-estado.err{color:#cc2233;}
+.no-estado.load{color:#8899aa;}
+.btn[disabled]{opacity:.5;cursor:not-allowed;}
+.diag-t{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:14px;}
+.diag-t th{background:#003366;color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:12px;
+text-transform:uppercase;letter-spacing:.5px;padding:8px 10px;text-align:left;}
+.diag-t td{padding:7px 10px;border-bottom:1px solid #dde3ed;vertical-align:top;}
+.diag-t tr:nth-child(even) td{background:#f4f7fb;}
+.dg-ok{color:#1a7a44;font-weight:600;}
+.dg-warn{color:#b06000;font-weight:600;}
+.dg-err{color:#cc2233;font-weight:600;}
+.diag-h{font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;color:#003366;
+text-transform:uppercase;margin:10px 0 8px;}
+.diag-nota{font-size:12px;color:#8899aa;margin-bottom:12px;line-height:1.5;}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--texto);min-height:100vh;}
 /* LOGIN */
@@ -188,6 +205,7 @@ td.resp-cell{white-space:nowrap;font-weight:500;}
       <button class="btn btn-acento" onclick="abrirModal()">+ Nuevo</button>
       <button class="btn btn-primary" onclick="recargar()">&#x21BA; Actualizar</button>
       <button class="btn btn-primary" onclick="exportarCSV()">CSV</button>
+      <button class="btn btn-primary" id="btn-diag" style="display:none" onclick="abrirDiag()">Diagnostico</button>
     </div>
   </div>
 
@@ -208,7 +226,8 @@ td.resp-cell{white-space:nowrap;font-weight:500;}
   <div class="modal">
     <div class="modal-hdr"><span class="mi" id="m-icon"></span><h2 id="m-titulo"></h2></div>
     <div class="campo-row">
-      <div class="campo"><label>N (automatico)</label><input type="text" id="m-no" class="no-field" readonly></div>
+      <div class="campo"><label>N (automatico)</label><input type="text" id="m-no" class="no-field" readonly>
+        <div id="m-no-estado" class="no-estado"></div></div>
       <div class="campo"><label>Fecha</label>
         <div style="position:relative;">
           <input type="text" id="m-fecha" placeholder="dd/mm/aa" maxlength="8" style="padding-right:38px;letter-spacing:1px;font-weight:600;width:100%;">
@@ -222,8 +241,20 @@ td.resp-cell{white-space:nowrap;font-weight:500;}
     <div class="campo"><label>Asunto</label><textarea id="m-asunto" placeholder="Descripcion del asunto"></textarea></div>
     <div class="campo"><label>Observacion (opcional)</label><input type="text" id="m-obs" placeholder="Nota o aclaracion"></div>
     <div class="modal-btns">
-      <button class="btn btn-danger" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn btn-danger" onclick="cerrarModal(false)">Cancelar</button>
       <button class="btn btn-primary" id="btn-guardar" onclick="guardar()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DIAGNOSTICO -->
+<div class="modal-overlay" id="modal-diag">
+  <div class="modal" style="width:860px;max-width:98vw;">
+    <div class="modal-hdr"><span class="mi">&#128269;</span><h2>Diagnostico de sincronizacion y correlativos</h2></div>
+    <div id="diag-body" style="max-height:60vh;overflow:auto;"></div>
+    <div class="modal-btns">
+      <button class="btn btn-primary" onclick="abrirDiag()">Revisar de nuevo</button>
+      <button class="btn btn-danger" onclick="cerrarDiag()">Cerrar</button>
     </div>
   </div>
 </div>
@@ -308,6 +339,82 @@ var guardandoAhora = false;
 var reloadTimer = null;
 var dataCargadaDeSheets = false;
 
+/* Origen real de cada pestana: 'ninguno' | 'local' (Excel embebido) | 'sheets' */
+var origenDatos = {};
+for(var _oi=0;_oi<TIPOS.length;_oi++){ origenDatos[TIPOS[_oi].id] = 'ninguno'; }
+
+/* Ultimo diagnostico de lectura por pestana (para el panel de Diagnostico) */
+var diagLectura = {};
+
+/* Numero reservado en el servidor para el registro que se esta creando */
+var numeroReservado = null;   // {tipo:'Memorando', no:568}
+var reservaEnCurso   = false;
+
+/* Operaciones que no llegaron a Sheets. Se guardan en el navegador para que
+   NO se pierdan si se cierra la pestana antes de recuperar la conexion. */
+var PEND_KEY = 'corr2026_pendientes';
+var pendientes = [];
+try{
+  var _pj = localStorage.getItem(PEND_KEY);
+  if(_pj) pendientes = JSON.parse(_pj) || [];
+}catch(e){ pendientes = []; }
+function guardarPendientes(){
+  try{ localStorage.setItem(PEND_KEY, JSON.stringify(pendientes)); }catch(e){}
+}
+
+/* Identificador unico por operacion: si la respuesta se pierde por timeout pero
+   el servidor si la ejecuto, el reintento NO vuelve a insertar la fila. */
+function nuevoOpId(){
+  return 'op'+Date.now()+'_'+Math.random().toString(36).slice(2,8);
+}
+
+/* Re-aplica localmente las operaciones pendientes para que el auto-reload no las borre */
+function aplicarPendientesLocal(tipo){
+  pendientes.forEach(function(p){
+    if(p.tipo!==tipo) return;
+    var arr = DB[tipo]||[];
+    var pl = p.payload;
+    var i = -1;
+    for(var k=0;k<arr.length;k++){ if(Number(arr[k].no)===Number(pl.no)){ i=k; break; } }
+    if(pl.accion==='agregar'){
+      if(i===-1) arr.push({no:pl.no,remite:pl.remite,resp:pl.resp,fecha:pl.fecha,asunto:pl.asunto,obs:pl.obs,nueva:true});
+    } else if(pl.accion==='editar'){
+      var obj = {no:pl.no,remite:pl.remite,resp:pl.resp,fecha:pl.fecha,asunto:pl.asunto,obs:pl.obs};
+      if(i>=0) arr[i]=obj; else arr.push(obj);
+    } else if(pl.accion==='eliminar'){
+      if(i>=0) arr.splice(i,1);
+    }
+  });
+}
+
+/* Reintenta enviar las operaciones pendientes una por una */
+var reenviando = false;
+function reenviarPendientes(){
+  if(reenviando || !pendientes.length) return;
+  reenviando = true;
+  var p = pendientes[0];
+  apiPost(p.payload, function(err,res){
+    reenviando = false;
+    if(!err && res && res.ok){
+      pendientes.shift();
+      guardarPendientes();
+      /* Si el servidor tuvo que reasignar el N (ya estaba ocupado), lo reflejamos */
+      if(res.no && p.payload.accion==='agregar' && Number(res.no)!==Number(p.payload.no)){
+        var arr = DB[p.tipo]||[];
+        for(var k=0;k<arr.length;k++){
+          if(Number(arr[k].no)===Number(p.payload.no)){ arr[k].no = Number(res.no); break; }
+        }
+        toast('El N '+p.payload.no+' ya estaba ocupado. Se reasigno el N '+res.no,'warn');
+      }
+      syncStatus('ok', pendientes.length ? pendientes.length+' cambio(s) pendiente(s)' : 'Sincronizado');
+      if(pendientes.length) setTimeout(reenviarPendientes, 800);
+      else cargarDatosSheets(true);
+    } else {
+      syncStatus('err', pendientes.length+' cambio(s) sin sincronizar');
+    }
+  });
+}
+
 /* ===================== UTILIDADES ===================== */
 function showLoad(txt){ document.getElementById('load-txt').textContent=txt||'Procesando...'; document.getElementById('loading').classList.add('show'); }
 function hideLoad(){ document.getElementById('loading').classList.remove('show'); }
@@ -317,22 +424,25 @@ function getTipo(id){ for(var i=0;i<TIPOS.length;i++){if(TIPOS[i].id===id)return
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 /* ===================== API JSONP ===================== */
+var _jsonpN = 0;
 function apiGet(tipo,cb){
-  var cbName='_gs_'+tipo.replace(/[^a-z]/gi,'')+'_'+Date.now();
+  var cbName='_gs_'+tipo.replace(/[^a-z]/gi,'')+'_'+Date.now()+'_'+(++_jsonpN);
   var s=document.createElement('script'); var done=false;
-  var t=setTimeout(function(){if(!done){done=true;cb(new Error('Timeout'));}delete window[cbName];if(s.parentNode)s.parentNode.removeChild(s);},15000);
-  window[cbName]=function(data){if(!done){done=true;clearTimeout(t);cb(null,data);}delete window[cbName];if(s.parentNode)s.parentNode.removeChild(s);};
-  s.onerror=function(){if(!done){done=true;clearTimeout(t);cb(new Error('Error'));}delete window[cbName];};
+  function limpiar(){ window[cbName]=function(){}; if(s.parentNode)s.parentNode.removeChild(s); }
+  var t=setTimeout(function(){if(!done){done=true;cb(new Error('Timeout'));}limpiar();},15000);
+  window[cbName]=function(data){if(!done){done=true;clearTimeout(t);cb(null,data);}limpiar();};
+  s.onerror=function(){if(!done){done=true;clearTimeout(t);cb(new Error('Error'));}limpiar();};
   s.src=SCRIPT_URL+'?accion=leer&tipo='+tipo+'&callback='+cbName+'&_='+Date.now();
   document.head.appendChild(s);
 }
 
 function apiPost(body,cb){
-  var cbName='_gsp_'+Date.now();
+  var cbName='_gsp_'+Date.now()+'_'+(++_jsonpN);
   var s=document.createElement('script'); var done=false;
-  var t=setTimeout(function(){if(!done){done=true;cb(new Error('Timeout'));}delete window[cbName];if(s.parentNode)s.parentNode.removeChild(s);},15000);
-  window[cbName]=function(data){if(!done){done=true;clearTimeout(t);cb(null,data);}delete window[cbName];if(s.parentNode)s.parentNode.removeChild(s);};
-  s.onerror=function(){if(!done){done=true;clearTimeout(t);cb(new Error('Error'));}delete window[cbName];};
+  function limpiar(){ window[cbName]=function(){}; if(s.parentNode)s.parentNode.removeChild(s); }
+  var t=setTimeout(function(){if(!done){done=true;cb(new Error('Timeout'));}limpiar();},15000);
+  window[cbName]=function(data){if(!done){done=true;clearTimeout(t);cb(null,data);}limpiar();};
+  s.onerror=function(){if(!done){done=true;clearTimeout(t);cb(new Error('Error'));}limpiar();};
   s.src=SCRIPT_URL+'?data='+encodeURIComponent(JSON.stringify(body))+'&callback='+cbName+'&_='+Date.now();
   document.head.appendChild(s);
 }
@@ -352,34 +462,62 @@ function filaAObj(f){
 
 /* ===================== CARGA DE DATOS ===================== */
 function cargarDatosIniciales(){
-  // Cargar datos del Excel embebido
+  // Semilla del Excel embebido: SOLO para pestanas que aun no se leyeron de Sheets.
+  // Antes esto se ejecutaba en cada login y podia pisar datos ya sincronizados.
   for(var tid in DATA_INICIAL){
-    if(DB[tid] !== undefined){
-      DB[tid] = DATA_INICIAL[tid].filter(function(r){ return r.remite||r.asunto||r.obs; });
-    }
+    if(DB[tid] === undefined) continue;
+    if(origenDatos[tid] === 'sheets') continue;
+    // Se conservan las filas en blanco: son numeros YA emitidos (reservados/anulados).
+    // Filtrarlas hacia creaba huecos y permitia que el correlativo los reutilizara.
+    DB[tid] = DATA_INICIAL[tid].slice();
+    origenDatos[tid] = 'local';
   }
   actualizarTabs(); poblarResp(); render();
 }
 
 function cargarDatosSheets(silencioso){
   if(!silencioso) syncStatus('load','Sincronizando con Sheets...');
-  var pending=TIPOS.length, errs=0;
+  var pending=TIPOS.length, errs=0, vacias=[];
   for(var i=0;i<TIPOS.length;i++){
     (function(t){
       apiGet(t.id,function(err,rows){
         if(!err && Array.isArray(rows)){
+          var descartadas = 0;
           var parsed = rows.filter(function(r){
-            if(!r[0]) return false;
+            if(r[0]===undefined||r[0]===null) return false;
             var v=String(r[0]).trim().toLowerCase();
-            if(v===''||v==='no'||v==='n'||v==='n°'||isNaN(Number(r[0]))) return false;
+            if(v===''||v==='no'||v==='n'||v==='n°') return false;
+            if(isNaN(Number(r[0]))){ descartadas++; return false; }
             return true;
           }).map(filaAObj);
-          if(parsed.length > 0){ DB[t.id] = parsed; }
-        } else errs++;
+
+          diagLectura[t.id] = {ok:true, filas:rows.length, validas:parsed.length, descartadas:descartadas};
+
+          if(parsed.length > 0){
+            DB[t.id] = parsed;
+            origenDatos[t.id] = 'sheets';
+            aplicarPendientesLocal(t.id);
+          } else {
+            /* La hoja respondio pero sin registros utiles. Puede ser una hoja
+               realmente vacia o una pestana con otro nombre en el Sheet.
+               No se borran los datos locales: se avisa en el Diagnostico. */
+            vacias.push(t.label);
+            diagLectura[t.id].aviso = 'La hoja "'+t.id+'" no devolvio registros. Verifique que la pestana exista en el Google Sheet y se llame exactamente asi.';
+          }
+        } else {
+          errs++;
+          diagLectura[t.id] = {ok:false, error:(err&&err.message)||'Sin respuesta'};
+        }
         pending--;
         if(pending===0){
           dataCargadaDeSheets = (errs < TIPOS.length);
-          syncStatus(errs===0?'ok':'err', errs===0?'Sincronizado con Sheets':'Sin conexion - datos locales');
+          var txt, est;
+          if(errs===0 && !vacias.length){ est='ok';  txt='Sincronizado con Sheets'; }
+          else if(errs===TIPOS.length){  est='err'; txt='Sin conexion - datos locales'; }
+          else if(errs>0){               est='err'; txt='Sincronizacion parcial ('+errs+' de '+TIPOS.length+' hojas fallaron)'; }
+          else {                         est='err'; txt='Hoja sin datos: '+vacias.join(', '); }
+          if(pendientes.length) txt += ' - '+pendientes.length+' cambio(s) pendiente(s)';
+          syncStatus(est, txt);
           actualizarTabs(); poblarResp(); render();
           if(!silencioso) hideLoad();
         }
@@ -446,13 +584,14 @@ function doLogin(){
   USUARIOS.forEach(function(x){
     if(x.id.trim()===uidTrim && x.pass.trim()===passTrim) u=x;
   });
-  if(!u){errEl.textContent='Usuario o contrasena incorrectos. (ID: '+uidTrim+')';errEl.style.display='block';return;}
+  if(!u){errEl.textContent='Usuario o contrasena incorrectos.';errEl.style.display='block';return;}
   errEl.style.display='none';
     usuarioActual=u;
     document.getElementById('hdr-nombre').textContent=u.nombre;
     document.getElementById('hdr-rol').textContent=u.rol==='admin'?'Administrador':'Usuario';
     document.getElementById('hdr-avatar').textContent=u.nombre.charAt(0).toUpperCase();
     document.getElementById('btn-usuarios').style.display=u.rol==='admin'?'':'none';
+    document.getElementById('btn-diag').style.display=u.rol==='admin'?'':'none';
     document.getElementById('login-screen').style.display='none';
     document.getElementById('app').style.display='block';
     construirTabs();
@@ -461,11 +600,22 @@ function doLogin(){
     cargarDatosIniciales();
     cargarDatosSheets(true);
     hideLoad();
-    reloadTimer=setInterval(function(){ if(!guardandoAhora){ try{cargarDatosSheets(true);}catch(e){} } },60000);
+    reloadTimer=setInterval(function(){
+      if(guardandoAhora) return;
+      // No recargar mientras haya un modal abierto (evita perder lo que se esta editando)
+      if(document.getElementById('modal-doc').classList.contains('show')) return;
+      if(document.getElementById('modal-usu').classList.contains('show')) return;
+      if(document.getElementById('modal-diag').classList.contains('show')) return;
+      if(reservaEnCurso) return;
+      try{
+        if(pendientes.length) reenviarPendientes();
+        else cargarDatosSheets(true);
+      }catch(e){}
+    },60000);
 }
 
 function doLogout(){
-  clearInterval(reloadTimer);
+  if(reloadTimer){ clearInterval(reloadTimer); reloadTimer=null; }
   usuarioActual=null;
   document.getElementById('app').style.display='none';
   document.getElementById('login-screen').style.display='flex';
@@ -571,26 +721,40 @@ function render(){
 
   var html='';
   datos.forEach(function(d,i){
-    var idx=(DB[tipoActual]||[]).indexOf(d);
     var obsHtml=d.obs?'<span class="obs-badge">'+esc(d.obs.substring(0,30))+(d.obs.length>30?'...':'')+'</span>':'';
-    html+='<tr class="'+(d.nueva?'nueva-fila':'')+'">'
+    // Fila sin contenido: el N ya fue emitido pero nunca se lleno. Se conserva
+    // para que el correlativo no vuelva a entregar ese numero.
+    var enBlanco = !d.remite && !d.asunto && !d.obs;
+    var asuntoHtml = enBlanco
+      ? '<span style="color:#8899aa;font-style:italic;">N reservado - sin datos</span>'
+      : esc(d.asunto);
+    html+='<tr class="'+(d.nueva?'nueva-fila':'')+'"'+(enBlanco?' style="background:#fffbe8;"':'')+'>'
       +'<td class="num">'+d.no+'</td>'
       +'<td>'+esc(d.remite)+'</td>'
       +'<td class="resp-cell">'+esc(d.resp)+'</td>'
       +'<td class="fecha-cell">'+esc(d.fecha)+'</td>'
-      +'<td class="asunto-cell">'+esc(d.asunto)+'</td>'
+      +'<td class="asunto-cell">'+asuntoHtml+'</td>'
       +'<td class="obs-cell">'+obsHtml+'</td>'
       +'<td style="white-space:nowrap;">'
-        +'<button class="btn btn-primary btn-sm" onclick="editarDoc('+idx+')">Editar</button> '
-        +(usuarioActual&&usuarioActual.rol==='admin'?'<button class="btn btn-danger btn-sm" onclick="eliminarDoc('+idx+')">Eliminar</button>':'')
+        +'<button class="btn btn-primary btn-sm" onclick="editarDoc('+Number(d.no)+')">Editar</button> '
+        +(usuarioActual&&usuarioActual.rol==='admin'?'<button class="btn btn-danger btn-sm" onclick="eliminarDoc('+Number(d.no)+')">Eliminar</button>':'')
       +'</td></tr>';
   });
   tbody.innerHTML=html;
 }
 
 /* ===================== MODAL DOCUMENTO ===================== */
+function fechaHoy(){
+  var d=new Date();
+  return ('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)+'/'+String(d.getFullYear()).slice(2);
+}
+function fechaHoyISO(){
+  var d=new Date();
+  return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);
+}
 function abrirModal(){
-  editIdx=null; editNo=null;
+  if(reservaEnCurso){ toast('Espere, se esta pidiendo el numero...','warn'); return; }
+  editIdx=null; editNo=null; numeroReservado=null;
   var t=getTipo(tipoActual);
   document.getElementById('m-icon').innerHTML=t.icon;
   document.getElementById('m-titulo').textContent='Nuevo '+t.label;
@@ -598,15 +762,45 @@ function abrirModal(){
   document.getElementById('m-resp').value=usuarioActual?usuarioActual.nombre:'';
   document.getElementById('m-asunto').value='';
   document.getElementById('m-obs').value='';
-  document.getElementById('m-fecha').value='';
-  // Calcular siguiente N
-  obtenerSiguienteNo(tipoActual,function(n){ document.getElementById('m-no').value=n; });
+  // Fecha de hoy por defecto (editable)
+  document.getElementById('m-fecha').value=fechaHoy();
+  document.getElementById('m-fecha-picker').value=fechaHoyISO();
+  // Reservar el siguiente N en el servidor ANTES de dejar guardar
+  document.getElementById('m-no').value='...';
+  setEstadoNo('load','Solicitando numero al servidor...');
+  bloquearGuardar(true);
+  var tipoPedido = tipoActual;
+  reservarNumero(tipoPedido,function(n,bloqueado,motivo){
+    // Si el usuario cerro el modal o cambio de pestana mientras se pedia
+    if(!document.getElementById('modal-doc').classList.contains('show') || editIdx!==null){
+      if(bloqueado) liberarNumero(tipoPedido,n);
+      return;
+    }
+    if(tipoPedido!==tipoActual){ if(bloqueado) liberarNumero(tipoPedido,n); return; }
+    document.getElementById('m-no').value=n;
+    if(bloqueado){
+      numeroReservado={tipo:tipoPedido,no:n};
+      setEstadoNo('ok','N '+n+' reservado para usted. Nadie mas puede tomarlo.');
+    } else if(motivo==='desfasado'){
+      numeroReservado=null;
+      setEstadoNo('err','El contador del servidor esta atrasado respecto a los registros. '
+        +'Se usa el N '+n+' de forma provisional. Revise el Diagnostico y ejecute '
+        +'"prepararHojas" en Apps Script.');
+    } else {
+      numeroReservado=null;
+      setEstadoNo('warn','N provisional (sin bloqueo del servidor). Se verificara al guardar.');
+    }
+    bloquearGuardar(false);
+  });
   document.getElementById('modal-doc').classList.add('show');
 }
 
-function editarDoc(idx){
-  var d=(DB[tipoActual]||[])[idx];
-  if(!d) return;
+function editarDoc(no){
+  var arr=(DB[tipoActual]||[]);
+  var idx=-1;
+  for(var k=0;k<arr.length;k++){ if(Number(arr[k].no)===Number(no)){ idx=k; break; } }
+  var d=arr[idx];
+  if(!d){ toast('Registro no encontrado, recargue la pagina','warn'); return; }
   editIdx=idx; editNo=d.no;
   var t=getTipo(tipoActual);
   document.getElementById('m-icon').innerHTML=t.icon;
@@ -617,21 +811,88 @@ function editarDoc(idx){
   document.getElementById('m-asunto').value=d.asunto;
   document.getElementById('m-obs').value=d.obs||'';
   document.getElementById('m-fecha').value=d.fecha;
+  // Sincronizar el selector de calendario con la fecha del registro (dd/mm/aa)
+  var mF=String(d.fecha||'').match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  document.getElementById('m-fecha-picker').value = mF ? ((mF[3].length===2?'20'+mF[3]:mF[3])+'-'+('0'+mF[2]).slice(-2)+'-'+('0'+mF[1]).slice(-2)) : '';
+  numeroReservado=null;
+  setEstadoNo('','');
+  bloquearGuardar(false);
   document.getElementById('modal-doc').classList.add('show');
 }
 
-function cerrarModal(){ document.getElementById('modal-doc').classList.remove('show'); }
+function cerrarModal(guardado){
+  // Si se cancela sin guardar, se devuelve el numero reservado para no dejar huecos
+  if(!guardado && numeroReservado){
+    liberarNumero(numeroReservado.tipo, numeroReservado.no);
+  }
+  numeroReservado=null;
+  setEstadoNo('','');
+  bloquearGuardar(false);
+  document.getElementById('modal-doc').classList.remove('show');
+}
 
-function obtenerSiguienteNo(tipo,cb){
-  if(editIdx!==null){cb(editNo);return;}
-  var local=(DB[tipo]||[]).map(function(d){return Number(d.no)||0;});
-  var noLocal=local.length?Math.max.apply(null,local)+1:1;
+/* ===================== CORRELATIVO ===================== */
+/* Mayor N conocido localmente para un tipo */
+function maxLocal(tipo){
+  var m=0;
+  (DB[tipo]||[]).forEach(function(d){ var n=Number(d.no)||0; if(n>m)m=n; });
+  return m;
+}
+function existeNo(tipo,no){
+  var arr=DB[tipo]||[];
+  for(var k=0;k<arr.length;k++){ if(Number(arr[k].no)===Number(no)) return true; }
+  return false;
+}
+
+/* Calculo local + relectura de la hoja. Es SOLO el plan B: no bloquea nada,
+   por lo que dos personas a la vez pueden obtener el mismo numero. */
+function calcularNoProvisional(tipo,cb){
+  var noLocal = maxLocal(tipo)+1;
   apiGet(tipo,function(err,rows){
-    if(editIdx!==null){cb(editNo);return;}
-    if(err||!Array.isArray(rows)){cb(noLocal);return;}
+    if(err||!Array.isArray(rows)){ cb(noLocal,false); return; }
     var nums=rows.filter(function(r){return r[0]&&!isNaN(Number(r[0]));}).map(function(r){return Number(r[0]);});
-    cb(Math.max(noLocal,nums.length?Math.max.apply(null,nums)+1:1));
+    cb(Math.max(noLocal, nums.length?Math.max.apply(null,nums)+1:1), true);
   });
+}
+
+/* Pide al servidor un N exclusivo. El Apps Script usa LockService, asi que
+   dos usuarios simultaneos reciben numeros distintos aunque pulsen a la vez. */
+function reservarNumero(tipo,cb){
+  reservaEnCurso = true;
+  apiPost({accion:'reservar', tipo:tipo, usuario:usuarioActual?usuarioActual.nombre:'?'},
+  function(err,res){
+    reservaEnCurso = false;
+    if(!err && res && res.ok && res.no){
+      var n = Number(res.no);
+      /* Red de seguridad: si el servidor entrega un N que ya existe aqui, su
+         contador esta desfasado (hoja vacia, mal nombrada o Correlativos sin
+         sincronizar). No se acepta: chocaria con registros ya emitidos. */
+      if(n <= maxLocal(tipo)){
+        liberarNumero(tipo,n);
+        cb(maxLocal(tipo)+1, false, 'desfasado');
+        return;
+      }
+      cb(n, true);
+    } else {
+      calcularNoProvisional(tipo,function(n){ cb(n,false); });
+    }
+  });
+}
+
+/* Devuelve un numero reservado que al final no se uso (solo si sigue siendo
+   el ultimo entregado; si alguien ya tomo el siguiente, el servidor lo ignora). */
+function liberarNumero(tipo,no){
+  if(!no) return;
+  apiPost({accion:'liberar', tipo:tipo, no:no, usuario:usuarioActual?usuarioActual.nombre:'?'}, function(){});
+}
+
+function setEstadoNo(clase,txt){
+  var el=document.getElementById('m-no-estado');
+  if(el){ el.className='no-estado '+clase; el.textContent=txt; }
+}
+function bloquearGuardar(b){
+  var btn=document.getElementById('btn-guardar');
+  if(btn){ btn.disabled=!!b; }
 }
 
 /* Date picker sync */
@@ -643,7 +904,14 @@ document.getElementById('m-fecha-picker').addEventListener('change',function(){
 
 /* ===================== GUARDAR ===================== */
 function guardar(){
-  var no=editIdx!==null?editNo:Number(document.getElementById('m-no').value)||0;
+  var no;
+  if(editIdx!==null){
+    no = editNo;
+  } else if(numeroReservado){
+    no = numeroReservado.no;          // numero bloqueado por el servidor
+  } else {
+    no = Number(document.getElementById('m-no').value)||0;
+  }
   var remite=document.getElementById('m-remite').value.trim();
   var resp=document.getElementById('m-resp').value.trim();
   var asunto=document.getElementById('m-asunto').value.trim();
@@ -655,35 +923,83 @@ function guardar(){
   showLoad('Guardando...');
   var obj={no:no,remite:remite,resp:resp,fecha:fecha,asunto:asunto,obs:obs,nueva:true};
   if(editIdx!==null){
-    DB[tipoActual][editIdx]=obj;
+    // Buscar por N° en lugar de confiar en el indice (el array pudo cambiar por una recarga)
+    var iEd=-1;
+    for(var k=0;k<DB[tipoActual].length;k++){ if(Number(DB[tipoActual][k].no)===Number(editNo)){ iEd=k; break; } }
+    if(iEd>=0) DB[tipoActual][iEd]=obj; else DB[tipoActual].push(obj);
   } else {
+    if(!no || no<=0){
+      // Recalcular N si el campo quedo vacio o invalido
+      no = maxLocal(tipoActual)+1; obj.no=no;
+    }
+    // Red de seguridad: si ese N ya existe localmente, se corre al siguiente libre
+    if(existeNo(tipoActual,no)){
+      var noAnterior=no;
+      no = maxLocal(tipoActual)+1; obj.no=no;
+      toast('El N '+noAnterior+' ya estaba en uso. Se asigno el N '+no,'warn');
+    }
     DB[tipoActual].push(obj);
   }
   // Enviar a Sheets
   var accion = editIdx!==null ? 'editar' : 'agregar';
-  var payload={accion:accion,tipo:tipoActual,no:no,remite:remite,resp:resp,fecha:fecha,asunto:asunto,obs:obs,usuario:usuarioActual?usuarioActual.nombre:'?'};
+  var payload={accion:accion,tipo:tipoActual,no:no,remite:remite,resp:resp,fecha:fecha,
+    asunto:asunto,obs:obs,usuario:usuarioActual?usuarioActual.nombre:'?',
+    opId:nuevoOpId(), reservado:(numeroReservado?1:0)};
+  var tipoGuardado = tipoActual;
   apiPost(payload,function(err,res){
     guardandoAhora=false; hideLoad();
-    if(!err&&res&&res.ok){ syncStatus('ok','Sincronizado'); toast(editIdx!==null?'Registro actualizado':'Registro guardado'); }
-    else { syncStatus('err','Error al guardar (guardado local)'); toast('Guardado localmente - sin conexion','warn'); }
+    if(!err&&res&&res.ok){
+      // El servidor puede devolver otro N si el pedido ya estaba ocupado
+      if(res.no && accion==='agregar' && Number(res.no)!==Number(payload.no)){
+        var arr=DB[tipoGuardado]||[];
+        for(var k=0;k<arr.length;k++){
+          if(Number(arr[k].no)===Number(payload.no)){ arr[k].no=Number(res.no); break; }
+        }
+        toast('El N '+payload.no+' ya estaba ocupado en el Sheet. Se guardo como N '+res.no,'warn');
+      } else {
+        toast(accion==='editar'?'Registro actualizado':'Registro guardado');
+      }
+      syncStatus('ok', pendientes.length ? pendientes.length+' cambio(s) pendiente(s)' : 'Sincronizado');
+      setTimeout(function(){ for(var tid in DB){ (DB[tid]||[]).forEach(function(d){ delete d.nueva; }); } render(); }, 6000);
+    }
+    else {
+      pendientes.push({tipo:payload.tipo, payload:payload});
+      guardarPendientes();
+      syncStatus('err','Sin conexion - '+pendientes.length+' cambio(s) pendiente(s)');
+      toast('Sin conexion: el registro se reintentara automaticamente','warn');
+    }
     actualizarTabs(); poblarResp(); render();
   });
-  cerrarModal(); editIdx=null; editNo=null;
+  cerrarModal(true); editIdx=null; editNo=null;
 }
 
 /* ===================== ELIMINAR ===================== */
-function eliminarDoc(idx){
-  var d=(DB[tipoActual]||[])[idx];
-  if(!d) return;
-  if(!confirm('Eliminar el registro N '+d.no+' - '+d.asunto+'?')) return;
+function eliminarDoc(no){
+  var arr=(DB[tipoActual]||[]);
+  var idx=-1;
+  for(var k=0;k<arr.length;k++){ if(Number(arr[k].no)===Number(no)){ idx=k; break; } }
+  var d=arr[idx];
+  if(!d){ toast('Registro no encontrado, recargue la pagina','warn'); return; }
+  if(!confirm('Eliminar el registro N '+d.no+' - '+(d.asunto||'(sin asunto)')+'?\n\n'
+    +'El N '+d.no+' NO se volvera a entregar (queda quemado en el contador).\n'
+    +'Si el documento se anulo, es preferible Editar el registro y escribir ANULADO '
+    +'en Observacion para dejar constancia.')) return;
   guardandoAhora=true;
   showLoad('Eliminando...');
   DB[tipoActual].splice(idx,1);
-  var payload={accion:'eliminar',tipo:tipoActual,no:d.no,usuario:usuarioActual?usuarioActual.nombre:'?'};
+  var payload={accion:'eliminar',tipo:tipoActual,no:d.no,usuario:usuarioActual?usuarioActual.nombre:'?',opId:nuevoOpId()};
   apiPost(payload,function(err,res){
     guardandoAhora=false; hideLoad();
-    if(!err&&res&&res.ok){ syncStatus('ok','Sincronizado'); toast('Registro eliminado'); }
-    else { syncStatus('err','Sin conexion'); toast('Eliminado localmente','warn'); }
+    if(!err&&res&&res.ok){
+      syncStatus('ok', pendientes.length ? pendientes.length+' cambio(s) pendiente(s)' : 'Sincronizado');
+      toast('Registro eliminado');
+    }
+    else {
+      pendientes.push({tipo:payload.tipo, payload:payload});
+      guardarPendientes();
+      syncStatus('err','Sin conexion - '+pendientes.length+' cambio(s) pendiente(s)');
+      toast('Sin conexion: la eliminacion se reintentara automaticamente','warn');
+    }
     actualizarTabs(); poblarResp(); render();
   });
 }
@@ -703,7 +1019,7 @@ function exportarCSV(){
     }).join(';'));
   });
   // BOM UTF-8 para que Excel abra los acentos bien
-  var bom='﻿';
+  var bom='\uFEFF';
   var blob=new Blob([bom+rows.join('\n')],{type:'text/csv;charset=utf-8;'});
   var url=URL.createObjectURL(blob);
   var a=document.createElement('a');
@@ -712,6 +1028,75 @@ function exportarCSV(){
   a.click();
   URL.revokeObjectURL(url);
 }
+
+/* ===================== DIAGNOSTICO ===================== */
+function analizarTipo(tipo){
+  var arr=(DB[tipo]||[]);
+  var nums=arr.map(function(d){return Number(d.no)||0;}).filter(function(n){return n>0;});
+  var vistos={}, dup=[];
+  nums.forEach(function(n){ if(vistos[n]) { if(dup.indexOf(n)===-1) dup.push(n); } else vistos[n]=1; });
+  var max=nums.length?Math.max.apply(null,nums):0;
+  var faltan=[];
+  for(var n=1;n<=max;n++){ if(!vistos[n]) faltan.push(n); }
+  var vacios=arr.filter(function(d){ return !d.remite && !d.asunto && !d.obs; })
+                .map(function(d){ return d.no; });
+  dup.sort(function(a,b){return a-b;});
+  return {total:arr.length, max:max, dup:dup, faltan:faltan, vacios:vacios,
+          pend:pendientes.filter(function(p){return p.tipo===tipo;}).length};
+}
+
+function abrirDiag(){
+  var html='';
+  html+='<div class="diag-h">Estado de cada hoja</div>';
+  html+='<table class="diag-t"><thead><tr><th>Hoja</th><th>Lectura</th><th>Origen</th>'
+      +'<th>Registros</th><th>Ultimo N</th><th>Pendientes</th></tr></thead><tbody>';
+  TIPOS.forEach(function(t){
+    var a=analizarTipo(t.id);
+    var d=diagLectura[t.id];
+    var lect, cls;
+    if(!d){ lect='Sin leer'; cls='dg-warn'; }
+    else if(!d.ok){ lect='ERROR: '+d.error; cls='dg-err'; }
+    else if(d.validas===0){ lect='Respondio vacia ('+d.filas+' filas)'; cls='dg-err'; }
+    else { lect=d.validas+' filas validas'+(d.descartadas?' / '+d.descartadas+' descartadas':''); cls='dg-ok'; }
+    var org = origenDatos[t.id]==='sheets' ? '<span class="dg-ok">Google Sheets</span>'
+            : origenDatos[t.id]==='local'  ? '<span class="dg-warn">Excel embebido</span>'
+            : '<span class="dg-err">Sin datos</span>';
+    html+='<tr><td><strong>'+esc(t.label)+'</strong><br><span style="color:#8899aa;font-size:11px;">hoja: '+esc(t.id)+'</span></td>'
+      +'<td class="'+cls+'">'+esc(lect)+(d&&d.aviso?'<br><span style="font-weight:400;font-size:11px;">'+esc(d.aviso)+'</span>':'')+'</td>'
+      +'<td>'+org+'</td><td>'+a.total+'</td><td>'+a.max+'</td>'
+      +'<td class="'+(a.pend?'dg-err':'dg-ok')+'">'+a.pend+'</td></tr>';
+  });
+  html+='</tbody></table>';
+
+  html+='<div class="diag-h">Correlativos</div>';
+  html+='<table class="diag-t"><thead><tr><th>Hoja</th><th>N repetidos</th><th>N faltantes</th>'
+      +'<th>Registros en blanco (N ya emitido)</th></tr></thead><tbody>';
+  TIPOS.forEach(function(t){
+    var a=analizarTipo(t.id);
+    function lista(x){
+      if(!x.length) return '<span class="dg-ok">Ninguno</span>';
+      var s=x.slice(0,40).join(', ');
+      if(x.length>40) s+=' ... (+'+(x.length-40)+')';
+      return s;
+    }
+    html+='<tr><td><strong>'+esc(t.label)+'</strong></td>'
+      +'<td class="'+(a.dup.length?'dg-err':'')+'">'+lista(a.dup)+'</td>'
+      +'<td class="'+(a.faltan.length?'dg-warn':'')+'">'+lista(a.faltan)+'</td>'
+      +'<td>'+lista(a.vacios)+'</td></tr>';
+  });
+  html+='</tbody></table>';
+
+  html+='<div class="diag-nota">'
+    +'<strong>N repetidos:</strong> dos registros con el mismo numero. Debe corregirse a mano en el Google Sheet.<br>'
+    +'<strong>N faltantes:</strong> huecos en la numeracion. Suelen ser numeros anulados o registros borrados.<br>'
+    +'<strong>Registros en blanco:</strong> el numero esta tomado pero la fila no tiene destinatario ni asunto. '
+    +'El sistema los conserva para que el correlativo no los reutilice.'
+    +'</div>';
+
+  document.getElementById('diag-body').innerHTML=html;
+  document.getElementById('modal-diag').classList.add('show');
+}
+function cerrarDiag(){ document.getElementById('modal-diag').classList.remove('show'); }
 
 /* ===================== USUARIOS ===================== */
 function abrirUsuarios(){
@@ -765,8 +1150,18 @@ function guardarUsuariosEnSheets(){
 /* ===================== EVENTS ===================== */
 document.getElementById('buscar').addEventListener('input',render);
 document.getElementById('filtro-resp').addEventListener('change',render);
-document.getElementById('modal-doc').addEventListener('click',function(e){if(e.target===this)cerrarModal();});
+document.getElementById('modal-doc').addEventListener('click',function(e){if(e.target===this)cerrarModal(false);});
 document.getElementById('modal-usu').addEventListener('click',function(e){if(e.target===this)cerrarUsuarios();});
+document.getElementById('modal-diag').addEventListener('click',function(e){if(e.target===this)cerrarDiag();});
+
+/* Aviso si se intenta cerrar la pestana con cambios sin sincronizar */
+window.addEventListener('beforeunload',function(e){
+  if(pendientes.length){
+    e.preventDefault();
+    e.returnValue='Hay '+pendientes.length+' cambio(s) sin sincronizar con Google Sheets.';
+    return e.returnValue;
+  }
+});
 
 </script>
 </body>
