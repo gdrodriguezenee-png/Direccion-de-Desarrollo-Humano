@@ -346,6 +346,15 @@ for(var _oi=0;_oi<TIPOS.length;_oi++){ origenDatos[TIPOS[_oi].id] = 'ninguno'; }
 /* Ultimo diagnostico de lectura por pestana (para el panel de Diagnostico) */
 var diagLectura = {};
 
+/* Nombre REAL de cada pestana en el Google Sheet. El backend acepta variantes
+   (plural, con punto, mayusculas) y aqui se guarda cual encontro. */
+var hojasReales = {};
+function consultarHojasReales(){
+  apiPost({accion:'diagnostico'}, function(err,res){
+    if(!err && res && res.ok && res.hojas) hojasReales = res.hojas;
+  });
+}
+
 /* Numero reservado en el servidor para el registro que se esta creando */
 var numeroReservado = null;   // {tipo:'Memorando', no:568}
 var reservaEnCurso   = false;
@@ -502,7 +511,8 @@ function cargarDatosSheets(silencioso){
                realmente vacia o una pestana con otro nombre en el Sheet.
                No se borran los datos locales: se avisa en el Diagnostico. */
             vacias.push(t.label);
-            diagLectura[t.id].aviso = 'La hoja "'+t.id+'" no devolvio registros. Verifique que la pestana exista en el Google Sheet y se llame exactamente asi.';
+            diagLectura[t.id].aviso = 'No llegaron registros. Verifique que la pestana exista en el Google Sheet '
+              +'y que el Apps Script este actualizado a la ultima version.';
           }
         } else {
           errs++;
@@ -599,6 +609,7 @@ function doLogin(){
     showLoad('Cargando datos...');
     cargarDatosIniciales();
     cargarDatosSheets(true);
+    consultarHojasReales();
     hideLoad();
     reloadTimer=setInterval(function(){
       if(guardandoAhora) return;
@@ -1046,9 +1057,10 @@ function analizarTipo(tipo){
 }
 
 function abrirDiag(){
+  consultarHojasReales();
   var html='';
   html+='<div class="diag-h">Estado de cada hoja</div>';
-  html+='<table class="diag-t"><thead><tr><th>Hoja</th><th>Lectura</th><th>Origen</th>'
+  html+='<table class="diag-t"><thead><tr><th>Hoja</th><th>Pestana en el Sheet</th><th>Lectura</th><th>Origen</th>'
       +'<th>Registros</th><th>Ultimo N</th><th>Pendientes</th></tr></thead><tbody>';
   TIPOS.forEach(function(t){
     var a=analizarTipo(t.id);
@@ -1061,7 +1073,12 @@ function abrirDiag(){
     var org = origenDatos[t.id]==='sheets' ? '<span class="dg-ok">Google Sheets</span>'
             : origenDatos[t.id]==='local'  ? '<span class="dg-warn">Excel embebido</span>'
             : '<span class="dg-err">Sin datos</span>';
-    html+='<tr><td><strong>'+esc(t.label)+'</strong><br><span style="color:#8899aa;font-size:11px;">hoja: '+esc(t.id)+'</span></td>'
+    var real = hojasReales[t.id];
+    var realHtml = real===undefined ? '<span class="dg-warn">sin consultar</span>'
+                 : real===null      ? '<span class="dg-err">NO EXISTE</span>'
+                 : '<span class="dg-ok">'+esc(real)+'</span>';
+    html+='<tr><td><strong>'+esc(t.label)+'</strong><br><span style="color:#8899aa;font-size:11px;">tipo: '+esc(t.id)+'</span></td>'
+      +'<td>'+realHtml+'</td>'
       +'<td class="'+cls+'">'+esc(lect)+(d&&d.aviso?'<br><span style="font-weight:400;font-size:11px;">'+esc(d.aviso)+'</span>':'')+'</td>'
       +'<td>'+org+'</td><td>'+a.total+'</td><td>'+a.max+'</td>'
       +'<td class="'+(a.pend?'dg-err':'dg-ok')+'">'+a.pend+'</td></tr>';
