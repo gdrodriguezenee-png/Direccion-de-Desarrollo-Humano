@@ -1,0 +1,2477 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Control de Documentos - Capacitaciones</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--azul:#0f5257;--azul-med:#16787f;--azul-claro:#e3f0ef;--acento:#e8702a;
+--bg:#f1f6f5;--blanco:#fff;--gris1:#d5e3e1;--gris2:#7b9491;--texto:#14302e;
+--raya:#bdd4d1;--rojo:#cc2233;--verde:#1a7a44;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--texto);min-height:100vh;}
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;
+background:linear-gradient(135deg,#062f33 0%,#0f5257 60%,#16787f 100%);}
+#login-screen.hidden{display:none;}
+.login-card{background:#fff;border-radius:16px;padding:40px 44px;width:400px;max-width:95vw;box-shadow:0 12px 50px rgba(0,0,0,.4);}
+.login-logo{display:flex;flex-direction:column;align-items:flex-start;gap:10px;margin-bottom:26px;}
+.login-logo .l-box{height:40px;width:auto;display:block;}
+.login-logo .l-txt h2{font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:700;color:#0f5257;text-transform:uppercase;}
+.login-logo .l-txt p{font-size:11px;color:#7b9491;margin-top:2px;}
+.login-card h3{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;color:#0f5257;margin-bottom:22px;text-transform:uppercase;border-bottom:2px solid #d5e3e1;padding-bottom:12px;}
+.lc{margin-bottom:16px;}
+.lc label{display:block;font-size:11px;font-weight:600;color:#0f5257;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px;}
+.lc select,.lc input{width:100%;font-family:'Barlow',sans-serif;font-size:14px;padding:10px 13px;border:1.5px solid #d5e3e1;border-radius:8px;background:#f1f6f5;color:#14302e;outline:none;}
+.btn-login{width:100%;margin-top:8px;font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;padding:12px;border:none;border-radius:8px;background:#0f5257;color:#fff;cursor:pointer;}
+.btn-login:hover{background:#16787f;}
+.login-error{display:none;margin-top:12px;background:#fde8e8;border:1px solid #f0b0b0;border-radius:6px;padding:9px 13px;font-size:13px;color:#cc2233;text-align:center;}
+#app{display:none;}
+header{background:#0f5257;color:#fff;padding:13px 24px;display:flex;align-items:center;gap:14px;box-shadow:0 3px 12px rgba(0,0,0,.35);}
+.h-logo{height:42px;width:auto;background:#fff;padding:4px 9px;border-radius:8px;flex-shrink:0;display:block;}
+.h-title h1{font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:700;text-transform:uppercase;}
+.h-title p{font-size:11px;color:#9fd2cf;font-weight:300;margin-top:1px;}
+.user-pill{margin-left:auto;display:flex;align-items:center;gap:10px;}
+.avatar{width:34px;height:34px;border-radius:50%;background:#e8702a;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;color:#0f5257;}
+.uinfo{text-align:right;}.uinfo strong{display:block;font-size:13px;}.uinfo small{font-size:11px;color:#9fd2cf;}
+.btn-hdr{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;padding:6px 14px;border-radius:6px;cursor:pointer;}
+.btn-usu{border:none;background:#e8702a;color:#0f5257;}.btn-usu:hover{background:#cf5f1d;}
+.btn-sal{border:1.5px solid rgba(255,255,255,.3);background:transparent;color:#fff;}.btn-sal:hover{background:rgba(255,255,255,.12);}
+.tabs-bar{background:#fff;border-bottom:3px solid #d5e3e1;padding:0 24px;display:flex;gap:2px;overflow-x:auto;}
+.tab-btn{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:11px 16px 9px;border:none;background:transparent;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-3px;display:flex;align-items:center;gap:7px;white-space:nowrap;color:#7b9491;}
+.tab-btn:hover{color:#14302e;}
+.tab-btn.active{color:#fff!important;border-bottom-color:transparent;}
+.tab-btn .ti{font-size:22px;line-height:1;transition:transform .2s,filter .2s;filter:grayscale(30%) opacity(70%);}
+.tab-btn:hover .ti{filter:grayscale(0%) opacity(100%);transform:scale(1.15);}
+.tab-btn.active .ti{filter:grayscale(0%) opacity(100%) drop-shadow(0 0 6px rgba(255,255,255,.8));transform:scale(1.2);}
+.tab-btn .tl{font-size:13px;}
+.tab-btn .tc{font-size:11px;font-weight:700;padding:2px 7px;border-radius:20px;background:rgba(0,0,0,.12);}
+.tab-btn[data-t="Memorando"].active{background:#0f5257;}
+.tab-btn[data-t="Oficio"].active{background:#7a2e5e;}
+.tab-btn[data-t="Circulares"].active{background:#b35c00;}
+.toolbar{background:#fff;border-bottom:2px solid #d5e3e1;padding:10px 24px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;}
+.tlabel{display:block;font-size:10px;font-weight:600;color:#7b9491;text-transform:uppercase;letter-spacing:.3px;margin-bottom:4px;}
+.toolbar input,.toolbar select{font-family:'Barlow',sans-serif;font-size:13px;padding:7px 11px;border:1.5px solid #d5e3e1;border-radius:6px;background:#f1f6f5;color:#14302e;outline:none;}
+.toolbar input[type="text"]{width:230px;}.toolbar select{width:165px;}
+.btn{font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:600;padding:7px 15px;border:none;border-radius:6px;cursor:pointer;letter-spacing:.4px;}
+.btn-primary{background:#0f5257;color:#fff;}.btn-primary:hover{background:#16787f;}
+.btn-acento{background:#e8702a;color:#0f5257;}.btn-acento:hover{background:#cf5f1d;}
+.btn-danger{background:#cc2233;color:#fff;}.btn-danger:hover{background:#aa1122;}
+.btn-verde{background:#1a7a44;color:#fff;}.btn-verde:hover{background:#145f34;}
+.btn-morado{background:#e8e0f8;color:#5530a0;}
+.btn-sm{padding:4px 10px;font-size:12px;}
+.info-bar{padding:5px 24px;font-size:12px;color:#7b9491;display:flex;gap:16px;align-items:center;flex-wrap:wrap;}
+.info-bar strong{color:#0f5257;}
+.tipo-badge{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;padding:3px 10px;border-radius:20px;color:#fff;}
+.sync-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:4px;}
+.s-ok{background:#1a7a44;}.s-load{background:#e8702a;animation:pulse .8s infinite;}.s-err{background:#cc2233;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.tabla-wrap{padding:14px 24px 40px;overflow-x:auto;}
+table{width:100%;border-collapse:collapse;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 2px 16px rgba(0,30,80,.08);font-size:13px;}
+thead tr{background:#0f5257;color:#fff;}
+thead th{font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:13px;letter-spacing:.6px;text-transform:uppercase;padding:11px 13px;white-space:nowrap;cursor:pointer;border-right:1px solid rgba(255,255,255,.2);}
+thead th:last-child{border-right:none;}
+thead th:hover{background:#16787f;}
+tbody tr{border-bottom:1px solid #bdd4d1;}
+tbody tr:nth-child(even){background:#e3f0ef;}
+tbody tr:hover{background:#c7e7e3!important;}
+tbody tr.nueva{background:#fff8e6!important;}
+td{padding:8px 13px;vertical-align:middle;border-right:1px solid #bdd4d1;}
+td:last-child{border-right:none;}
+td.num{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px;color:#0f5257;text-align:center;width:50px;}
+td.fecha{white-space:nowrap;color:#7b9491;font-size:12px;width:90px;}
+td.realizado{color:#7b9491;}
+td.asunto{max-width:300px;}
+.badge{display:inline-block;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;padding:2px 7px;border-radius:20px;background:#e3f0ef;color:#16787f;margin-left:5px;}
+.badge.c40{background:#dff0e8;color:#1a7a44}.badge.c57{background:#fde8d8;color:#c05000}
+.badge.c55{background:#e8e0f8;color:#5530a0}.badge.c77{background:#fde0e0;color:#b02020}
+.badge.c66{background:#e0f4fd;color:#0070a0}.badge.c75{background:#f4ffe0;color:#507000}
+.empty-row td{text-align:center;padding:30px;color:#7b9491;font-style:italic;}
+.loading-overlay{display:none;position:fixed;inset:0;background:rgba(0,20,50,.45);z-index:300;align-items:center;justify-content:center;}
+.loading-overlay.show{display:flex;}
+.loading-box{background:#fff;border-radius:12px;padding:28px 36px;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,.3);}
+.spinner{width:40px;height:40px;border:4px solid #d5e3e1;border-top-color:#0f5257;border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 14px;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-box p{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:600;color:#0f5257;text-transform:uppercase;}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,20,50,.55);z-index:200;align-items:center;justify-content:center;}
+.modal-overlay.show{display:flex;}
+.modal{background:#fff;border-radius:12px;padding:28px 32px;width:540px;max-width:95vw;box-shadow:0 8px 40px rgba(0,0,0,.3);}
+.modal-hdr{display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-bottom:14px;border-bottom:2px solid #d5e3e1;}
+.modal-hdr .mi{font-size:24px;}.modal-hdr h2{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;text-transform:uppercase;color:#0f5257;}
+.campo{margin-bottom:14px;}
+.campo label{display:block;font-size:11px;font-weight:600;color:#0f5257;margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px;}
+.campo input,.campo textarea,.campo select{width:100%;font-family:'Barlow',sans-serif;font-size:13px;padding:8px 12px;border:1.5px solid #d5e3e1;border-radius:6px;background:#f1f6f5;color:#14302e;outline:none;}
+.campo textarea{resize:vertical;min-height:70px;}
+.campo-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.modal-btns{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;}
+.no-field{background:#e3f0ef!important;color:#0f5257!important;font-weight:700!important;font-family:'Barlow Condensed',sans-serif!important;font-size:16px!important;}
+.no-field.reservado{background:#dff0e8!important;color:#1a7a44!important;border-color:#1a7a44!important;}
+.no-field.provisional{background:#fdf3d8!important;color:#a06a00!important;border-color:#e8702a!important;}
+.res-chip{font-family:'Barlow',sans-serif;font-size:12px;margin:-6px 0 12px;padding:7px 11px;border-radius:7px;display:none;line-height:1.4;}
+.res-chip.show{display:block;}
+.res-chip.ok{background:#dff0e8;color:#1a7a44;border-left:3px solid #1a7a44;}
+.res-chip.wait{background:#fdf3d8;color:#a06a00;border-left:3px solid #e8702a;}
+.res-chip.warn{background:#fde0e0;color:#b02020;border-left:3px solid #cc2233;}
+tbody tr.reservada{background:#fdf3d8!important;color:#a06a00;font-style:italic;}
+tbody tr.duplicada{background:#fdeaea!important;}
+tbody tr.duplicada:hover{background:#f9dada!important;}
+.dup-badge{display:inline-block;background:#cc2233;color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:.5px;padding:1px 5px;border-radius:3px;vertical-align:middle;}
+tbody tr.reservada td{border-right-color:#f0d090;}
+tbody tr.reservada:hover{background:#fbead0!important;}
+.res-badge{font-family:'Barlow Condensed',sans-serif;font-style:normal;font-size:11px;font-weight:700;background:#e8702a;color:#0f5257;padding:2px 8px;border-radius:20px;letter-spacing:.4px;}
+.res-info{background:#fdf3d8;color:#a06a00;padding:2px 9px;border-radius:20px;font-weight:600;}
+.conf-overlay{display:none;position:fixed;inset:0;background:rgba(0,20,50,.62);z-index:500;align-items:center;justify-content:center;}
+.conf-overlay.show{display:flex;}
+.conf-box{background:#fff;border-radius:12px;width:430px;max-width:92vw;box-shadow:0 10px 44px rgba(0,0,0,.35);overflow:hidden;animation:confIn .16s ease;}
+@keyframes confIn{from{transform:scale(.94);opacity:0}to{transform:scale(1);opacity:1}}
+.conf-top{display:flex;align-items:center;gap:12px;padding:18px 24px 14px;border-bottom:2px solid #d5e3e1;}
+.conf-ico{font-size:26px;line-height:1;}
+.conf-top h3{font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:700;text-transform:uppercase;color:#0f5257;letter-spacing:.4px;}
+.conf-body{padding:18px 24px;font-family:'Barlow',sans-serif;font-size:14px;color:#14302e;line-height:1.55;}
+.conf-body b{color:#0f5257;}
+.conf-nota{margin-top:10px;font-size:12.5px;padding:9px 12px;border-radius:7px;background:#fde0e0;color:#b02020;border-left:3px solid #cc2233;}
+.conf-nota.aviso{background:#fdf3d8;color:#a06a00;border-left-color:#e8702a;}
+.conf-btns{display:flex;gap:10px;justify-content:flex-end;padding:0 24px 20px;}
+.conf-btns .btn{min-width:104px;justify-content:center;}
+.u-wrap{max-height:300px;overflow-y:auto;border:1px solid #d5e3e1;border-radius:8px;margin-bottom:18px;}
+.u-table{width:100%;border-collapse:collapse;font-size:13px;}
+.u-table thead tr{background:#0f5257;color:#fff;position:sticky;top:0;}
+.u-table thead th{font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:12px;letter-spacing:.5px;text-transform:uppercase;padding:9px 12px;white-space:nowrap;}
+.u-table tbody tr{border-bottom:1px solid #bdd4d1;}
+.u-table tbody tr:nth-child(even){background:#e3f0ef;}
+.u-table tbody tr:hover{background:#c7e7e3;}
+.u-table td{padding:8px 12px;vertical-align:middle;}
+.u-av{width:28px;height:28px;border-radius:50%;background:#0f5257;display:inline-flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:13px;color:#e8702a;}
+.rol-admin{background:#fff0cc;color:#8a5800;display:inline-block;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;}
+.rol-usuario{background:#e3f0ef;color:#16787f;display:inline-block;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;}
+.u-form{background:#e3f0ef;border-radius:10px;padding:16px 18px;border:1.5px solid #d5e3e1;}
+.u-form h4{font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;color:#0f5257;text-transform:uppercase;margin-bottom:14px;}
+.u-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;align-items:end;}
+.u-grid .campo{margin-bottom:0;}.u-grid .campo label{font-size:10px;}.u-grid .campo input,.u-grid .campo select{font-size:12px;padding:7px 10px;}
+.toast{position:fixed;bottom:24px;right:24px;z-index:400;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:600;padding:12px 20px;border-radius:8px;color:#fff;box-shadow:0 4px 20px rgba(0,0,0,.25);transform:translateY(80px);opacity:0;transition:all .3s ease;pointer-events:none;}
+.toast.show{transform:translateY(0);opacity:1;}
+.toast.success{background:#1a7a44;}.toast.error{background:#cc2233;}.toast.warn{background:#c07000;}
+</style>
+</head>
+<body>
+
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <img class="l-box" src="data:image/jpeg;base64,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" alt="ENEE">
+      <div class="l-txt"><h2>Capacitaciones</h2><p>Direccion de Desarrollo Humano</p></div>
+    </div>
+    <h3>Iniciar Sesion</h3>
+    <div class="lc"><label>Usuario</label>
+      <select id="l-usuario">
+        <option value="">Seleccione su nombre</option>
+      </select>
+    </div>
+    <div class="lc" id="lc-pass"><label>Contrasena</label>
+      <input type="password" id="l-pass" placeholder="Ingrese su contrasena">
+    </div>
+    <button class="btn-login" id="btn-ingresar">Ingresar</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<div id="app">
+  <header>
+    <img class="h-logo" src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQDAwMDAgQDAwMEBAQFBgoGBgUFBgwICQcKDgwPDg4MDQ0PERYTDxAVEQ0NExoTFRcYGRkZDxIbHRsYHRYYGRj/2wBDAQQEBAYFBgsGBgsYEA0QGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBj/wAARCABgASkDASIAAhEBAxEB/8QAHAABAAMBAQEBAQAAAAAAAAAAAAUGBwQIAwIB/8QAQhAAAQMDAwMCBAIHBQUJAAAAAQIDBAUGEQASIQcTMSJBCBRRYTJxFSM1QlKBshYzYpGhFyRDcsEJGSY0c4Kx0fH/xAAaAQEAAwEBAQAAAAAAAAAAAAAAAwQFBgIB/8QAKREAAgICAgEDAwQDAAAAAAAAAAECAwQREiExBRNBYXGhFFGBsSMyUv/aAAwDAQACEQMRAD8A9+aaaaAahLpuSDattyKxP3FtoYShH4nFHwkfc6ms48nWddVFVeTDp1MptKlVJlbinpTEdI3rQkYABJGPUoZxzjnVTOulVTKcV2vBLRBTsUX4I+H1xor9XiQJNIqEUSHAguuAFLaTxuVjnyDx9MHWqNrC0BQ8EZB15Loth3pTKrHkqtOprcZZKW1p2p7bnOF5Ucca9P2zJky7NpcqZ/5lyK2p0jxv2jOMcefprJ9DzsnI5RyVp/HWi3nY9dWnX4JfTTTXQmeNNNNANNNNANNNNANNNNANNNNANNNNANNNNANNNNANNNNANNNNANNNNANNNNANNNNANNNNANNNNANCQPca/hOMn21TK1WKlUa5+iKPPjU9qI8j56RIcCVLSU5KGh5BwR6vtjUNtyrW2eoR5E2/clHblPxPnkmQydhQhClndj8IwPUoZBIHj31mcuu1+g3NRpUyC9KUsOJShcwqW+VJAU4G+dqc42n74x41FXTT4NLq1NpdIdTGi7y49UFzCoONEkKU8tIzzkjzkjHOpW3aLKu2luN0xhyj0sLUyqY4dzshKeAEgHA2nI4OzGMDXP3ZN19jqj/sv2NCFMK4qb8M5ZV33U9TZDBp9XaVIZX31yUKQhHqPKCE/q8pynn/AOdS1nuy6TFgVeQ33KYqKD8zCWp4uDaAQ6knO5JySQPtxzqVHS+PFgzW6XcFRYeltpadWspXgBW704wU5PPB9zrOqzAuKlPPWzVdrjzhLsWQgEc49TgUMckbgVH67TnUFn6jFkrbdv8Aokh7Vq4Q0jdKTX6XWS8mnye8WcBYKSkjI4OD7ffUrnOspplHlzLfj12kSU08MNlLL7aFJUEgAEFpDY3jgfiyeONWqyruTckeTFkJSiowtqZCUggHIOFAHlOcHg+NbmNmOeo2LTfj6lCynjtxfSLZr+FSUqSkqAUrOB9df3XFL/a8A/dz+nWiQHbpppoBpppoBpppoBpppoBpppoBpppoBpppoBpppoBpppoBpppoBpppoBpppoBpppoBpppoD4SnC1CecBwUoUoHGfAzrFKZe9DtyiKeq+HZ0twrW+1F7y2iedxWrAVjjgeM62yQ0l+M6ypRSFpKSUnBAI9teWanSTAupNrobps12M68ljLqmkocG0kq3eTtPv5IOM41zvreRbRwnV9jQwK4WcoyJGnypN3XUVpmPreqz/pU+EoWqOhWxIwBgeVHA/hGTr0K4qnW1bRWcMwoLOAB7ADgD7nj+Z1lXT6joiXyy2qESIYWwiX3SpL4AUoEAjjB+hxqx9QqzOeq8C3aRtLxX3FHJ4cA3IyBztSAVHH+Ee+ofTW8fHnfZ3JvRJlJWWRrj4RGW7cc2NdYqVQdT2aipKZzOR/ui1f3Zz+8BwgkZwCM6tfUGgxq1aqnltjvQj3m3PBR9Tn2xwr/ANus2DNWkMKbp75mKUkpMVcZSU9s4UttohWfUMZCj5x41pNmVoV+xUtSsLkNs9tzP/ESU+lX8xwfooKHtqbEt92EqLV5XyeL4e3JWQM1ti+oFl1+VS6wupusSm0utvMpWttC9vrASoD3Gd2MZJ1O27cECd1ciSqfV2qgmQyqNJ2spadbXgqT3NvC/wAJ59tZncENcusOSFyWX3IiSFsS5DjRJUgEhCjwo55AHHOD41aOl1nPMXTAmRavAddirMmUW1lW5JCm9qQBjggjcDgjWTiZWQ740a3FPyXLqavbdm+2j0D7a4pX7Wg/m5/TrsAwNccr9rQfzc/p126MI7c486pi+rXTJuS9GVftvB5hRQ6188gqaIOCFDOU+D51ciONeWKpWrktb4h+udUs20WKvMao1Nf3BxpvsrSw6QsoUMunycDztx76+g3p/qn03jQoMyRflutRp4JiPLnthEjCtp7aicKweOPfVhqdWptFo8irVefGgwI6O49KkuBttpP8SlHgD76w/qb0xtOs9JrWsaPTIkaFU61nY2gD5d5+PIdK0D9z9Yd2BwNVVd0yOo/wcsUGrjNQg0acm4GVHJS7T0FvYoH2W8G1c+QD9dAbu71V6bM0qNU3r7t5uFKWtuPJVObDbyk/iCFZwojI8fXXbCv2y6lR5tVp910eVCgDMt9qUhSY4+rmD6f5684382wz8BfSeQmGHVNS7acS202kqUd7WQkHA3Hx5GSfOtAt6za5WfikqvVZ63nraohoApAhyu2JFTd7hWXXW0EpCUpwlO4kn7DQGiU3qh06rNQYg0q+LfmSZCtjDbE5tRdV/Cnn1H7DX2rXUWxbcrRo9eu+i02oBAc+UlS0tulJ8EJJyRrx3bXy16fDJZnRiPS1Umq1quynoFfntJajNCPPW64Yzg5U/tBSlA2k+rnA1s/WQSYHxKdFJNOpSKxObXVEJbW42yt4CKgHLihgfXB/loDZaJe1o3L85/Z+5aVUvkgFShFkpcLAOSCvB9OcHz9NfikX7ZdfqZp1Euqjz5eSPl48tC1nGSSEg5IwDyNY5Msyt9TOht6zWafDta+q8tdPcSpQCVIiSVFllxSOFgpygrHlK/pr82pe8erdcbVovVHppJsa+4keS3SZLJbdg1FBbw6008kZxgBQQrGMaA35c+G1UWYDsplEp9KltMKWAtxKcbiE+SBuGfpka/NTqlOo1JfqdVnMQoUdO96RIWEIbT9STwBry11fvii0rq1S+q8e54Yk2hXEUZ2lpkgrcp7o7cxfbz5DikkH6NHXqkfLzoQ3JbfjvJ8KAUlaT/oQQf8AXQEVDvG1ajablz0+4qXLorQUpdRjyUuMJCfxZWkkDHv9NLevK1LtYfeta46ZWW2CEurp8hL6UE8gEpJwftrzNY/d6GuU29WEKPTq6pz0WuxkjLdHmmU421LSnwllY2oWPAIB8a061azSbC+GypVqImnwUN1CoBhSEpQ0p5c51DZ4wCNyk/yGgNehz4dQYU/BlsSWkuLaK2XAsBaVFKk5HuCMEex1E1y+LPtqUiNcFz0mmPLG4Ny5SG1bfrgngfc6wjoXXqVaPUW/+mNIr7FehNti5qS+0+H+73UYktlQ8qDw3Y+jmdT3www4dyfD4i869Hj1KtXRKlTKvIkthxTqi6pAZVuH4EJAQEeAPbk6A0qd1S6cUxbCKhfVvRlPo7jIdntp7qclOUc+oZBHH01MVe57eoFNbqFbrcCnxXcdt2S8lsLyMjbnzx9Neer3sOj2JXOhdq0/tSYcK8XhHK2U5abWh5xLQ88J3BI/5QdWTpapd1fEx1YrdwMpfmUOoR6JS2nhuTDihkOEtg/hLilblKHnCR7aA1t28bVZtRVzu3FS0UVON1RVJT2E845XnA5OOdf0Xha5s7+1ibhpiqFs7n6TTISY+3ON3cBxjPGsRJFv/G9XbOpkZldCuO0VVepU7tgsIlNuFsPbPwguJ4PHq25POqz03UeiDdtxJoDnTO92G0pL/rbotUWnlBzwGH/bPAWMe+gPS1vXXbV2QHJ1sV6nViM2vtregPpeQlWM4KknGcHXYzVqbIo5q0efGeghCnPmW3ApvanO47hxgYOfy1kNHq9Msj4TKIGHoNGMppunx3F7WW2nHXCgrJ8ekFSv5ahfhnrFHpUy8+kNNq7FTg27UTKpEhD/AHu7T5J7iRu9yhe9J/MaA2S3b6s27n32bXuik1lxhIU8mBJS8WwfG7aTj+epKsVuk29R3qtXKlFp0BnBdlSnA22jJwMqPA1jvw0sMM0fqP2WGm//AB3VE+hsJ4CkYHH561O8Q1I6b15K0tuNqp0jggKSf1StAc1I6j2FXp7cKjXlQ58h0ZaajzELU5/ygH1fy1/a31EsW26yKTX7uo1MnlAcEWXKQ26UnwQknJGsUsi0KDdf/Z0W/DrMVoFq2fmY8pICHYjzaFLQ62scoUlSQQR9NUti6LgueN8MF5T6Wmr3BMROLqFLQyuSRExuK18DIG7nyT99AeqLfvO07qeks25cdLqrkUJMhuHIS4pnd+HcAcpzg4zqd5+/+Wsz6Vsrqsms3pXbdYolzTJT1NksNlOQxHeX2UqKcBwpCz6x5ChrStv3VoD++TqtVGzqZULpZrLrbO4Jw4O0NyyCClQX5BBH+X01NVKc1TKVJnvAlthsrUAQCcDwM+51nNfvK4ZL0BFGDUcPyCy1IQ4HI7yygkIK8ckYUMDgqAweNZ+bdTCP+Vb+dE9ELG9wevgjalXRaF7zJTkZbq2FObWw8tXdB5HoIwj+8/EPPORxqhVW5HKfda6tInOJnpT3WlQp4Id3FSnQQRhPAxj/AApAJPGumAmfNYXW3ErmJ3fKrjvBXc7atwCfVkqG8Eg/Xj21sdnuWxclBZnt0emiWUDvpDCCQfGRxykkEgjjXN1wszXwjPj3tJo05yjQuTW/gxOkdTqjOrFYXJU5DjzULSwIySDT/wCBaTjjPO4nGTqSt+6GbddVUaK89LjqIZU1JcClOpcOTtSnxhXPtyT9db4mhUVpfcbpUMKPkhlP/wBaz/qTPpzERNv0tiE3OV+ucUhtILQB9IyBkEqPkcgAn76ms9NvxYe5O3bXjo8Rya7JcIQ8kLaVKg3HOq0WrTUpRIYMNsp2oUr07ct+/wCAKByM+T76v9m0Gh0qnttwHIcmRE3xQ8yclCArGzz5wlIP1I1mNJsBVxwWxDuJMGbFnbQWhsKE9v8AWEIwNy1AjPjgZ+o1+qY9VulNz3RU6hZ8iTGfQXYsqGR2g0ggbTjhPB3En3Hvr7h3ujjO2vr/AK8ny+HPcYS7/Y3rXFK/a0H83P6dfuBMTPpcaahOEvtJdAz4Chn/AK6+crmqwfzc/p11cZcltGS+no7SfbWTUrpdetF6s3Pf0LqBS1yrhRHafiv0IqaZQwFBsIIkBWcKOSfJ9tayTg5GsmgdXriqnUS47Mp/TOcajb4ZXLL1UjNtqbeClNKQr3BCCecY99egRyujV9FbEkdV2lTU183C9IcoKVd17Z20Nbe/6Wko9ISOffOpGX0TaZpV+tW3XWaTOvZ8u1GW7A+YS0lTHbcDSO4kJKlbl5JPJ8HAOoiufEWi2LPot2XH07uOn0SdOVTpskuMrXTHkuKQrvNg5KcIKgpOQR9NW+9epFRtn9AyKFZs66INafaix5lOmMIQlx3lsq3kegjneMjQFTrXQy46z0TtbpyvqFFZYt9+K83NTRQXHxFUlTCVJ72Bjb6iPxfb31l2JWl2yqK3U4bdVUzt+c+UJaDn8fa35x/h3fz1ng6t3C71aqnTyL02mrqtPhIqKnF1SMhpyOtZQlaVec5ByCBjGo+tdepNv9JqhfNR6dVtpqlVRVLqEJUpgOsnchCHUnO1xtRcTgpPg50BzUz4eEsfD870trF1icliWZ9JrMeAI0mnSS6p4PJw4oKUlajjGPTwc5121bpJftavazrrqXU2nPVG1u8Y5FvbUyVPNhC1OgSPJA/dxzqcp/VYN9VKf0+u22J1u1iqxXJVLUt9uSxNS2MuJS42fStIwdpHI5GuqX1J+cuyp25ZVuyrnnUpSUVJxl9uPHiuKTkNF1zhTuMEoTnAIzjxoCr3H0Zuy7roVXa71QdYksx2WYCaVSkx0wnG5CXy6N7q9ylbAk54xqbndN7irdYplfrl3wpNaobb/wChpDVI7TMV55vtrfcaLp7q9hIA3JSMk41WLl60TZfQm6rrp9r3JSnKDLdgVVtKowmQu2gKccbCyULxuAB58hQBGr50zcahdGaO+9CqNNiNww+lNWnibIDRHcDjz2TlRByeePHtoCJb6X1Vfw+y+mdSuWDPckxXIS6o9S8b2nM7lLaDvLhyo7twGTnHGpezLTue0uksS0pF4NVeoQIoixKtIp+whCUhKC42HMLIA9lDOunpz1AofU3p7Eu+3+6IclbrfbeADjakLKCFD2PGfyI1CdR+p8ywLgt2mos6dV269MTTo0mPLZaQiSoEpbWFnIBCSdwyPbQCzOmU6i9Lp1h3ncMe7qXKDyP1tOEU9t5SlOIWAtQUMrODgEcedQlD6L1q1rUsy16BfaE0i2ZK5XYnUsSFzVKW4pPcX3U42Jc4I53JCj9NTUTqPcrl3T7Ym9OKlFqTFMVU4uJ7DjEvCwgspdHCHBkHCscEfXXV0m6kL6qWGm7Wbbm0WA8841GEx9txx3YtSFkhBO3CkqHJ5xoCNvPpfWrj6w2zf9Fu6LQ5NAbdZbZFL75lNu47jbqu6nKDtBAAyDzr90DpXUrKq1UFhXb+iaJU5a5ztHlwBKbivOHLi4yt6S2FH1bVb0hRJx7arF1Xxct53ncHSSm2tXqZLgMNypsqDVY0dUiG4pQT2njkt79vJACkjIyCc6n6R1colM6XtVWuUOtUZ9ipG3o1GkESpsuSghCENFJPdK/IVnkZJOgOS6+jFVrlWtOVRb1bpbVtVA1ZhMmmfNuypSt/cW8supyFb1HakDB8HwBYZvTqRH6gSb6tSupotdqEZuLVA5E+YiVANg9ta2t6VJWnJAUlY4ODnVXvDrrVLDMVu5uldxNuz0ufIohSGJIfWlOS0Sk+hw8YSfP14Ovr/tnuQ9RH7GT0rqa66xSRW1xU1SLywV7AAc4Lm7jb/roCbgdMJdNcuO4GLkS9eldZTHer0yEHEMMp4Sy1HCwEtpBJA3ElRyonXzo3Sjd0Hd6W31W27op64phJk/JiK4GgPSSAtQLiT6gsY8DjVdpnXypVq6ret+ndM6x89XqS5V4iJM6OxhttQQ4heeUrSogY9/IOrDb3V+PddkXDU6HbNRcrluylwqpb8h1tl9h5AypIWTsUNuVJIOFfbQHLR+k9x0F6yY0G+2nKTa0P5ZMKTSgtUtRRsU8tzughe0kJwMDJJ3Z19ax0urkz4goPVGjXfDpS4tPVS1U8UnuplMKVvIdX3UkkK5SQBjkc6+Nudc6LVOh7PVSvUadQKNLWlFPYecRIkzVLX20IbbbJ9aljaE+T54Gup/qpV6Vc1vUy5OnlZpUavzEwYc0yWH0NuqBUEPhBy0SlJ45yQRnOgIa1+kN+2fb1yUujdT6ehdfqMqqPS12/l2O+/jcWsSNuBgEBQOrfDsSoUnoZG6f0q4UpksU0U41WXE7xX6dq3C3vHqVkn8WM6+9f6j29bfU62LFqLq01K4u/8pgDYjtJzhZ9t3IT9SDq4DkZ40BjdB6J1qn9G4HSqr3+ZlrxooguJhU0Q5UpgE5aW93F7UkcEoSCR7jOuy6+kFTrN82XXLduin2/Ds8L/RdMTSe+362u0oLV3UnbtwAAAR9TrWNNAUGj2NdDXVpN73NeceqJZpi6dGpkSm/KMslbiVqdyXVlSjsCefbV8wdfrTQFcvh2OxZMyRMjl+K0W3H2wM7mw4kqH+WdYhcFahzaRRaLb6qglEarvzAVtIjtsAKWUJCidiQk84Pt/LW1XVIiy1M24/3O3MSpyWUA+mOnhXI59RKUjHJyceNVqFYttQww23TnIUBh1bjcia5tUgq/4bKT+FOcckZ9vJ4571SizJk4waS8Mv4tkK1uS7KTY0Wqrsj52XLi1JqS6WWkvuKS0l4b3FuKV5wk5ICf3jkeNd9PvONVWIUeVKdpkuMC1FqFMw62U/wuoGPZJP0wc8HU22q4a1RKjFiNh23Y4disqLKG3ninOVpTjHBGB4yfzzrCg1HpsdbLcZXdOOW1lt32J3BXG325BPHGdYmRdZhRgq9ta+fn7GhVXG9y5eTXG77rVRfcYfutcanDcj9IxqflLqh4S37gkc8+wOudVWoUt2LRYshDLSVvyVP1Fz9fIVj1J3jlvfjIxn8OD9NZWu4J6yuJKU5tSgJZAWc4/h3j0+fJ4x9R41J2/bVx1e5Y9NgwER5SzvdRIiFQQhXha1qzvR7g55/nqnH1S26ShCLlsmeLCCcm9aL5Jpsa5aZRa7R5UpqSlfzD8lh4mUlASpJfQM+sZwVJ8j1ADkDXw/ttfbFqwaG5Bh3IzU5CoqJjitwfQpKSGyOMEhW7KucH7a0VuhUm1qbTokKdEjVNoqLkxTaU9zcfWXEgYCCo4wSMcYOdcsmk21Uqs/AeYgUi4G1iRHkxndyA8B/eJTkDeAeQRnB99bssGxLcZ8ZPzp9fYzlfF9NbSLTZUGpUuwKTTqs0y1Mjx0trbZOUpA4Az7nGMn651KSv2rB/Nz+nVcs+s1Z6dMoNekRZU6ElKvmI4Kd6CSBuHgHj286scn9qwfzc/p10WJKLqjx8Iz7U1J7O1XAPnXl6qWjcd5fEV1xott3TLoct+iUxgJZbbKZBWw7tStSklSAeRlODhRP016hIz/8AuqCOivTMVuZWG7VYaqEw5ky2n3kOv/TesLyoD2B8e2rJGV66KvQLgbtWiBTElun3UzRqg04kFpT3yTu9oZ4XwsA/fI1nkBuq9J+pVudFan8zKtqZXGKhaFQcyosspUpT0BxX1azuQfdBx7a1x3oN0kdiMRl2LTS1HeXJaTlwbHVnKnBhf4yfKvP31c5VvUecKcJ1NYkmmvIkQlPDeqO4lJSFpJ5BwSM/QnOgMGr1BrdxfGhdtOoVzzKBKcseOkPxWmnCvc+4kA9xJwATnIwfvqP62TYrHwUVuyRKbdrFtxKNCqQR60NPFbGBu/e8ZP5j662KT0d6cTbolXHItdg1eXkPz0vvIecBOdpWlYO3P7vj7a+D3Q7pS/RZFIfsinOwZUv56Sw4XFJff2hPccyr1qwByc+NAZ9RhJb+MONH6sPNv16PTlmzZcVox4T7CgPmgGyVEShgZBURsxtxzr+fDSidTbUv6zJz7Ua7YNz1B6UmQ2VqIfUFsvqTkFaFJ8EEA4xkHWr1fpnY9et2mUOs25EmwqWsOQUPFalRlgYCkL3bknB8519q109s+4JceZVqDHflx2wy1KSpbbwQOAkuIUFFP2JI0B51rdw3Xc3wyddpVwG2UIgKnUtf6HiONKkvMoQkvuKUtXlOBtxxjydatWZ07/YdZ9tUiAqfUK1EhsfKNyEsLXHQyhyQQtXA9CdufqsfXVsqPS+warZ6bVnWpTnKKHC6YCUFtlaz5UtKSN5Pk7s51yxej3TiFU6VUItrRmpNJT24DqXXd0ZOc7UevhP28e3jQGadJZlSsz4krwsSr0JVChXKj+1NHhGQh9KV8NS0JU36R6gle3yAfpqR+I2O/LqXSuNFmuwXnLyjIRKaQla2iWncKCVApJ/PjWiVbpjYtbveLeFVtyNLrsRSVR561r7rOP4CFekccgYB986/V1dNLIvWpQ6hdNvRqpJhYMZx9a/1KgchSAFAJVyfUOfvoCt2dFkWLclWt66Lhcq9WuWqyZ9NecQkOvMIjNBW5KAAgI27eBzx9dVb4bKzTrc+C+nV6sSURafBVUpL7y/CUJlvEn7+PGtAa6PdOWqkuoi12FTFxnIRkuPvLdDK/wAaAtSyQDjnBGdcCegfSNNDNFFj08UwncYHcd+XJzuz2t+3zz486AyyZSavfHxVX8za9zzqC5OsmAWnGmG1KWHe7tCw4klGMjxgjnXJe9Rh0rqb0WdqMto06zakijV51JyxCmvwEpZKl+MZ43HwVDPnW0q6L9NDXZFaFqR0VGSnY9MafebdWkeElaVg7R7J8D2GpSkdNrFolu1Kg061aa1Tam8p+dFW33ESnFAArc3k7lHA5P00B2Vx+gN1OiNVVhEiauYDTkbN60u7FbnEj2CUFWVeAD99ZVDB/wC8VqHBx/YNvj6/75rUrfsi1rWyaDRmIiinthQUpakI/hSVklKeB6RgceNRiOk3T5u/P7aItiKK/vK/0l3HO9yc43bvw5/d8fbQGVdS2bmd+NKzU2fLpsWsC0KqY66jHU8ypQdawlQSpJAJxznjng6kehi6E90hu6S0zMYvB2ZKXdrM9QMhupbCF5AwkN4A7e0YKcffWkzumFi1G/Wr1m25GeuBkp7VRUtzuoA9gQrgccgcH3B18qx0n6e125JlwVO14jtTmtpZly0KW05IQkYCXChQ3ADjnOgPLlP30/4VPh0uycSLeolebfqruNzbCFrebbdX9EpWoZPtnOvW9flW6lilmrttShInM/IISjuFT+coWgD+EZUVDgJBJ41zW705sm1LXkW3QLagQ6PJz3aclBWwsEYI7aiU4P0xjXwhdLrDp1PkQYVtxmY77SmVNpWvCW1DCkIyr9WkjyEYzoDCeqsW7rws+vX1bdouy5NMqbVYoNWbqDOAzAJHpb/GQ4BIyB5Ck/TXouz7mgXlYdHuqluBcOqRG5jJH0WkHH5gkj+Wo+n9N7KpNjP2dTaAzGoT+e5AaccS3g+QPVkD7Aga67Ssm17DoZo1o0WPSaeVlwRYxUG0qPkpSScfkMaAsGmmmgGmmmgKdUpiqZ1JLkl9iIzOp6Wo8mQfQHW3FFSPYZKVgjn9389RN02bWLp7MJ6vINGQ4iQ86oZdyn2bKTwDjnJOr/KhRJ0cx5sZmSyry28gLSfzB41XV9PrcSvuQG5lMVz+z5TjA5/wg7f9NZ1+LKacdbT+uv4J67VFp+GU+ZcwRd9OsmkUftU9ISiPUUuKQI6wncArjyePSeTnS56D+mHpgrLEdLCVhMKTHaC/WseFlIOMK/ex9j51YJHTWO4AhNw1RLQcS72lhpaFKTyCoFPq5OcnXbCtOr05vtQbtlMsZz2hCYx/okc6orDusTjdHa/jr6Fj3ox04MxyZZNZt6cRKjxKtTWo4W62lkulsHAUQn2PGdw9/bjWl2fKcVSWGbWpDkeA41hMialS1qXgAKWsnJAHj68AYxqYFEu+A7imXBTnmVeW5lPAIPuQWynP8xrmds+uS3zIcrsKC8eS5ToOxRP1O5ZB/wAtR43p7xpbri/x+Hs9W5Pux1Nr8/0dk+IY0JdOakJD8lvc7NkDepwg+reMY2Y9vHOBqjVZa0RzEap7M6TlLDDTiAp/uY8MLx6kAZyV8IGOTwNW5rp8y8rfV7gq9Rc+pdDKfvgJH/XVgplv02kKW5FbWp5YCVvvOFxxQHgblc4+w41cni2XPtcUQq2MF12yOtC23KHCW7NcQ9PeSlLq0AlKUpztQCeTjJ5Pkn24GpiV+1oA/wDU/p12gY1/FNoUtK1JBUnO0/TPnWnVWq4qMfBWlJyfJn60001IeRpppoBpppoBpppoBpppoBpppoBpppoBpppoBpppoBpppoBpppoBpppoBpppoBpppoD/2Q==" alt="ENEE">
+    <div class="h-title">
+      <h1>Control de Documentos Capacitaciones</h1>
+      <p>Departamento de Capacitaciones | Direccion de Desarrollo Humano</p>
+    </div>
+    <div class="user-pill">
+      <div class="uinfo"><strong id="hdr-nombre"></strong><small id="hdr-rol"></small></div>
+      <div class="avatar" id="hdr-avatar">G</div>
+      <button class="btn-hdr btn-usu" id="btn-usuarios" style="display:none" onclick="abrirUsuarios()">Usuarios</button>
+      <button class="btn-hdr" id="btn-actividad" style="display:none;background:#1a7a44;color:#fff;border:none;" onclick="abrirActividad()">Actividad</button>
+      <button class="btn-hdr btn-sal" onclick="intentarSalir()">Cerrar</button>
+    </div>
+  </header>
+
+  <div class="tabs-bar" id="tabs-bar"></div>
+
+  <div class="toolbar">
+    <div><span class="tlabel">Buscar</span><input type="text" id="buscar" placeholder="N, destinatario, asunto..."></div>
+    <div><span class="tlabel">Responsable</span><select id="filtro-resp"><option value="">Todos</option></select></div>
+    <div><span class="tlabel">Destinatario</span><select id="filtro-dest"><option value="">Todos</option></select></div>
+    <div><span class="tlabel">Año</span>
+      <select id="filtro-anio"><option value="">Todos</option></select>
+    </div>
+    <div style="margin-left:auto;display:flex;align-items:flex-end;gap:8px;">
+      <button class="btn btn-acento" onclick="abrirModal()">+ Nuevo</button>
+      <button class="btn btn-primary" onclick="recargar()">Actualizar</button>
+      <button class="btn btn-verde" id="btn-importar" style="display:none" onclick="abrirImportar()">Importar</button>
+    </div>
+  </div>
+
+  <div class="info-bar">
+    <span>Mostrando: <strong id="vis-count">0</strong></span>
+    <span>Total: <strong id="total-count">0</strong></span>
+    <span id="tipo-label"></span>
+    <span><span class="sync-dot s-load" id="sync-dot"></span><span id="sync-txt">Conectando...</span></span>
+    <span id="res-info"></span>
+    <span id="ver-app" style="margin-left:auto;font-size:11px;color:#7b9491;" title="Version de este archivo"></span>
+  </div>
+
+  <div class="tabla-wrap">
+    <table><thead id="t-head"></thead><tbody id="t-body"></tbody></table>
+  </div>
+</div>
+
+<!-- MODAL DOCUMENTO -->
+<div class="conf-overlay" id="modal-confirmar">
+  <div class="conf-box">
+    <div class="conf-top"><span class="conf-ico" id="cf-ico">&#9888;</span><h3 id="cf-titulo">Confirmar</h3></div>
+    <div class="conf-body" id="cf-msg"></div>
+    <div class="conf-btns">
+      <button class="btn" id="cf-no" style="background:#d5e3e1;color:#0f5257">No, regresar</button>
+      <button class="btn btn-danger" id="cf-si">Si, continuar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-doc">
+  <div class="modal">
+    <div class="modal-hdr"><span class="mi" id="m-icon"></span><h2 id="m-titulo"></h2></div>
+    <div class="campo-row">
+      <div class="campo"><label>N (automatico)</label><input type="text" id="m-no" class="no-field" readonly></div>
+      <div class="campo"><label>Fecha</label>
+        <div style="position:relative;">
+          <input type="text" id="m-fecha" placeholder="dd/mm/aa" maxlength="8" style="padding-right:38px;letter-spacing:1px;font-weight:600;width:100%;">
+          <input type="date" id="m-fecha-picker" tabindex="-1" style="position:absolute;top:0;right:0;width:36px;height:100%;opacity:0;cursor:pointer;border:none;">
+          <span onclick="document.getElementById('m-fecha-picker').showPicker()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:18px;cursor:pointer;">&#128197;</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="res-chip" id="m-res-estado"></div>
+
+    <div id="campos-std">
+      <div class="campo"><label>A quien se remite</label><input type="text" id="m-remite" placeholder="Destinatario"></div>
+      <div class="campo"><label>Realizado por</label><input type="text" id="m-resp"></div>
+      <div class="campo"><label>Asunto</label><textarea id="m-asunto" placeholder="Descripcion del asunto"></textarea></div>
+      <div class="campo" id="campo-fact" style="display:none;">
+        <label>Fecha de Actividad</label>
+        <div style="position:relative;">
+          <input type="text" id="m-fact" placeholder="dd/mm/aa" maxlength="8" style="padding-right:38px;letter-spacing:1px;font-weight:600;width:100%;">
+          <input type="date" id="m-fact-picker" tabindex="-1" style="position:absolute;top:0;right:0;width:36px;height:100%;opacity:0;cursor:pointer;border:none;">
+          <span onclick="document.getElementById('m-fact-picker').showPicker()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:18px;cursor:pointer;">&#128197;</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="campos-cirug" style="display:none;">
+      <div class="campo-row">
+        <div class="campo"><label>A Quien</label><input type="text" id="m-cir-remite" placeholder="Nombre del paciente"></div>
+        <div class="campo"><label>Clave</label><input type="text" id="m-cir-clave" placeholder="Clave"></div>
+      </div>
+      <div class="campo-row">
+        <div class="campo"><label>Centro de Trabajo</label><input type="text" id="m-cir-centro" placeholder="Centro de trabajo"></div>
+        <div class="campo"><label>Hospital</label><input type="text" id="m-cir-hospital" placeholder="Hospital"></div>
+      </div>
+      <div class="campo"><label>Monto Cotizacion</label>
+        <div style="position:relative;">
+          <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-weight:700;color:#0f5257;font-size:14px;">L.</span>
+          <input type="text" id="m-cir-monto" placeholder="0.00" style="padding-left:30px;">
+        </div>
+      </div>
+      <div class="campo"><label>Diagnostico</label><textarea id="m-cir-diag" placeholder="Descripcion del diagnostico"></textarea></div>
+    </div>
+
+    <div class="modal-btns">
+      <button class="btn btn-danger" onclick="intentarCerrarModal()">Cancelar</button>
+      <button class="btn btn-primary" id="btn-guardar" onclick="guardar()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL USUARIOS -->
+<div class="modal-overlay" id="modal-usu">
+  <div class="modal" style="width:720px;max-width:98vw;">
+    <div class="modal-hdr"><span class="mi">&#128101;</span><h2>Gestion de Usuarios</h2></div>
+    <div class="u-wrap">
+      <table class="u-table">
+        <thead><tr><th></th><th>Nombre</th><th>ID</th><th>Contrasena</th><th>Rol</th><th>Acciones</th></tr></thead>
+        <tbody id="u-body"></tbody>
+      </table>
+    </div>
+    <div class="u-form">
+      <h4>Agregar usuario</h4>
+      <div class="u-grid">
+        <div class="campo"><label>Nombre</label><input type="text" id="u-nombre" placeholder="Maria Lopez"></div>
+        <div class="campo"><label>ID</label><input type="text" id="u-id" placeholder="maria"></div>
+        <div class="campo"><label>Contrasena</label><input type="text" id="u-pass" placeholder="maria2026"></div>
+        <div class="campo"><label>Rol</label>
+          <select id="u-rol"><option value="usuario">Usuario</option><option value="admin">Administrador</option></select>
+        </div>
+      </div>
+      <div style="margin-top:12px;text-align:right;">
+        <button class="btn btn-verde" onclick="agregarUsuario()">Agregar</button>
+      </div>
+    </div>
+    <div class="modal-btns"><button class="btn btn-primary" onclick="cerrarUsuarios()">Cerrar</button></div>
+  </div>
+</div>
+
+<!-- MODAL PERMISOS -->
+<div class="modal-overlay" id="modal-permisos">
+  <div class="modal" style="width:460px;">
+    <div class="modal-hdr"><span class="mi">&#128274;</span><h2>Permisos de acceso</h2></div>
+    <p style="font-size:13px;color:#7b9491;margin-bottom:16px;">Selecciona las pestanas que puede ver <strong id="perm-nombre"></strong>:</p>
+    <div id="perm-checks" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;"></div>
+    <div class="modal-btns">
+      <button class="btn btn-danger" onclick="cerrarPermisos()">Cancelar</button>
+      <button class="btn btn-verde" onclick="guardarPermisos()">Guardar permisos</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ACTIVIDAD -->
+<div class="modal-overlay" id="modal-actividad">
+  <div class="modal" style="width:780px;max-width:98vw;">
+    <div class="modal-hdr"><span class="mi">&#128202;</span><h2>Actividad por Usuario</h2></div>
+    <div style="margin-bottom:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+      <div><span class="tlabel">Usuario</span>
+        <select id="act-usuario" style="font-family:'Barlow',sans-serif;font-size:13px;padding:7px 11px;border:1.5px solid #d5e3e1;border-radius:6px;background:#f1f6f5;outline:none;width:180px;"><option value="">Todos</option></select>
+      </div>
+      <div><span class="tlabel">Año</span>
+        <select id="act-anio" style="font-family:'Barlow',sans-serif;font-size:13px;padding:7px 11px;border:1.5px solid #d5e3e1;border-radius:6px;background:#f1f6f5;outline:none;width:120px;"><option value="">Todos</option></select>
+      </div>
+      <div><span class="tlabel">Seccion</span>
+        <select id="act-tipo" style="font-family:'Barlow',sans-serif;font-size:13px;padding:7px 11px;border:1.5px solid #d5e3e1;border-radius:6px;background:#f1f6f5;outline:none;width:180px;"><option value="">Todas</option></select>
+      </div>
+    </div>
+    <div id="act-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:6px;margin-bottom:12px;max-height:180px;overflow-y:auto;"></div>
+    <div style="display:flex;gap:4px;margin-bottom:8px;">
+      <button id="act-tab-resumen" onclick="actTab('resumen')" style="font-family:Barlow Condensed,sans-serif;font-size:13px;font-weight:700;padding:6px 16px;border:none;border-radius:6px;background:#0f5257;color:#fff;cursor:pointer;">Resumen</button>
+      <button id="act-tab-bitacora" onclick="actTab('bitacora')" style="font-family:Barlow Condensed,sans-serif;font-size:13px;font-weight:700;padding:6px 16px;border:none;border-radius:6px;background:#d5e3e1;color:#7b9491;cursor:pointer;">Ultimas Modificaciones</button>
+    </div>
+    <div id="act-resumen-tabla" style="max-height:300px;overflow-y:auto;border:1px solid #d5e3e1;border-radius:8px;">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead><tr style="background:#0f5257;color:#fff;position:sticky;top:0;">
+          <th style="padding:9px 12px;text-align:left;font-family:Barlow Condensed,sans-serif;font-size:12px;text-transform:uppercase;">Usuario</th>
+          <th style="padding:9px 12px;text-align:left;font-family:Barlow Condensed,sans-serif;font-size:12px;text-transform:uppercase;">Seccion</th>
+          <th style="padding:9px 12px;text-align:center;font-family:Barlow Condensed,sans-serif;font-size:12px;text-transform:uppercase;">Total</th>
+          <th style="padding:9px 12px;text-align:left;font-family:Barlow Condensed,sans-serif;font-size:12px;text-transform:uppercase;">Ultimo registro</th>
+        </tr></thead>
+        <tbody id="act-tbody"></tbody>
+      </table>
+    </div>
+    <div id="act-bitacora-tabla" style="display:none;max-height:300px;overflow-y:auto;border:1px solid #d5e3e1;border-radius:8px;">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead><tr style="background:#0f5257;color:#fff;position:sticky;top:0;">
+          <th style="padding:9px 12px;text-align:left;font-family:Barlow Condensed,sans-serif;font-size:12px;text-transform:uppercase;">Fecha</th>
+          <th style="padding:9px 12px;text-align:left;font-family:Barlow Condensed,sans-serif;font-size:12px;text-transform:uppercase;">Usuario</th>
+          <th style="padding:9px 12px;text-align:left;font-family:Barlow Condensed,sans-serif;font-size:12px;text-transform:uppercase;">Accion</th>
+          <th style="padding:9px 12px;text-align:left;font-family:Barlow Condensed,sans-serif;font-size:12px;text-transform:uppercase;">Seccion</th>
+          <th style="padding:9px 12px;text-align:left;font-family:Barlow Condensed,sans-serif;font-size:12px;text-transform:uppercase;">Detalle</th>
+        </tr></thead>
+        <tbody id="bit-tbody"></tbody>
+      </table>
+    </div>
+    <div class="modal-btns" style="margin-top:14px;">
+      <button class="btn btn-primary" onclick="cerrarActividad()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- MODAL IMPORTAR -->
+<div class="modal-overlay" id="modal-importar">
+  <div class="modal" style="width:880px;max-width:98vw;">
+    <div class="modal-hdr"><span class="mi">&#128228;</span><h2>Importar documentos ya realizados</h2></div>
+
+    <p style="font-size:13px;color:#7b9491;line-height:1.5;margin-bottom:14px;">
+      Para los documentos que ya llevaban antes del sistema. Se respeta el numero
+      que trae cada uno. En Excel selecciona las filas <b>sin el encabezado</b>,
+      copia con Ctrl+C y pega aqui abajo con Ctrl+V.
+    </p>
+
+    <div style="background:#e3f0ef;border:1.5px solid #d5e3e1;border-radius:8px;padding:11px 14px;margin-bottom:14px;">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;color:#0f5257;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Orden de las columnas en Excel</div>
+      <div style="font-size:12.5px;color:#14302e;">
+        <b>A</b> N &nbsp;&middot;&nbsp; <b>B</b> A quien se remite &nbsp;&middot;&nbsp;
+        <b>C</b> Realizado por &nbsp;&middot;&nbsp; <b>D</b> Fecha &nbsp;&middot;&nbsp;
+        <b>E</b> Asunto
+      </div>
+      <div style="font-size:11.5px;color:#7b9491;margin-top:5px;">
+        La fecha puede venir como 15/03/2026, 15/3/26 o 2026-03-15. El año se saca de la fecha.
+      </div>
+    </div>
+
+    <div class="campo-row" style="margin-bottom:12px;">
+      <div class="campo" style="margin-bottom:0;"><label>Seccion a la que entran</label>
+        <select id="imp-tipo"></select>
+      </div>
+      <div class="campo" style="margin-bottom:0;"><label>Año por defecto (si la fecha no lo trae)</label>
+        <input type="text" id="imp-anio" maxlength="4" placeholder="2026">
+      </div>
+    </div>
+
+    <div class="campo">
+      <label>Pega aqui las filas copiadas de Excel</label>
+      <textarea id="imp-texto" style="min-height:150px;font-family:ui-monospace,Consolas,monospace;font-size:12px;white-space:pre;overflow-x:auto;" placeholder="298&#9;Gerencia Financiera&#9;Sara&#9;03/09/2026&#9;Solicitud de capacitacion&#10;299&#9;INFOP&#9;Wendy&#9;11/09/2026&#9;Convenio de formacion"></textarea>
+    </div>
+
+    <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;">
+      <button class="btn btn-primary" onclick="revisarImport()">Revisar</button>
+      <span id="imp-resumen" style="font-size:13px;color:#7b9491;"></span>
+    </div>
+
+    <div id="imp-previa" style="display:none;max-height:260px;overflow:auto;border:1px solid #d5e3e1;border-radius:8px;margin-bottom:14px;">
+      <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
+        <thead><tr style="background:#0f5257;color:#fff;position:sticky;top:0;">
+          <th style="padding:8px 10px;text-align:left;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;font-size:11.5px;">N</th>
+          <th style="padding:8px 10px;text-align:left;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;font-size:11.5px;">A quien se remite</th>
+          <th style="padding:8px 10px;text-align:left;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;font-size:11.5px;">Realizado por</th>
+          <th style="padding:8px 10px;text-align:left;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;font-size:11.5px;">Fecha</th>
+          <th style="padding:8px 10px;text-align:left;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;font-size:11.5px;">Asunto</th>
+          <th style="padding:8px 10px;text-align:left;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;font-size:11.5px;">Año</th>
+          <th style="padding:8px 10px;text-align:left;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;font-size:11.5px;">Estado</th>
+        </tr></thead>
+        <tbody id="imp-tbody"></tbody>
+      </table>
+    </div>
+
+    <div id="imp-progreso" style="display:none;margin-bottom:12px;">
+      <div style="height:9px;background:#d5e3e1;border-radius:20px;overflow:hidden;">
+        <div id="imp-barra" style="height:100%;width:0;background:#0f5257;transition:width .25s;"></div>
+      </div>
+      <div id="imp-progreso-txt" style="font-size:12.5px;color:#7b9491;margin-top:6px;"></div>
+    </div>
+
+    <div class="modal-btns">
+      <button class="btn btn-danger" onclick="cerrarImportar()">Cerrar</button>
+      <button class="btn btn-verde" id="imp-btn-subir" disabled onclick="ejecutarImport()">Importar</button>
+    </div>
+  </div>
+</div>
+
+<div class="loading-overlay" id="loading">
+  <div class="loading-box"><div class="spinner"></div><p id="load-txt">Procesando...</p></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+
+/* ===== BACKEND PROPIO DE CAPACITACIONES =====
+   Esta app usa su PROPIO Google Sheets y su PROPIO Apps Script, aparte del
+   de Bienestar Social. Por eso las hojas se llaman normal (Memorando,
+   Oficio, Circulares, Usuarios, bitacora): al estar en otro libro no se
+   pueden cruzar con las del DBS.
+
+   PASO QUE FALTA: pega abajo la URL /exec de la implementacion del archivo
+   Codigo_Apps_Script_Capacitaciones.gs. Mientras no la pegues, la app no
+   deja entrar: asi no puede escribir en el Sheets equivocado. */
+var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzGVpU6W85dem73A7xzasElYessc5coU7PHBhfD09_wkWjCHsF0HD_WmJeaRB7BFVW-/exec';
+
+/* El Apps Script del DBS, que no se debe usar aqui bajo ninguna
+   circunstancia: si se le pide una hoja que no existe devuelve la de
+   Bienestar Social, y se terminaria escribiendo encima de esos datos. */
+var SCRIPT_DBS = 'AKfycbyv0h7VS1nDmOGCKXdd7qAW6Crso83sMRrDYnPYS6AWot8PZsdTc9IaM9kTQKpcYePnzw';
+
+var PREFIJO_HOJA = '';
+function hojaDe(t){ return PREFIJO_HOJA + t; }
+
+/* Version de ESTE archivo. Se muestra abajo a la derecha, junto a los
+   contadores. Sirve para saber de un vistazo si el navegador esta usando
+   la copia nueva o una vieja que quedo en cache. */
+var VERSION_APP = '2026.10.22-7';
+
+function appConfigurada(){
+  if(!SCRIPT_URL || SCRIPT_URL.indexOf('PEGAR_AQUI') !== -1) return false;
+  if(SCRIPT_URL.indexOf(SCRIPT_DBS) !== -1) return false;
+  return /^https:\/\/script\.google\.com\/macros\/s\/.+\/exec/.test(SCRIPT_URL);
+}
+
+function avisoConfiguracion(){
+  var esDBS = SCRIPT_URL && SCRIPT_URL.indexOf(SCRIPT_DBS) !== -1;
+  document.getElementById('l-usuario').innerHTML =
+    '<option value="">Sin conexion configurada</option>';
+  document.getElementById('btn-ingresar').disabled = true;
+  var err = document.getElementById('login-error');
+  err.style.display = 'block';
+  err.style.textAlign = 'left';
+  err.innerHTML = esDBS
+    ? '<b>Detenido por seguridad.</b><br>Esta app esta apuntando al Apps Script de '+
+      'Bienestar Social. Si la usara, escribiria encima de los datos del DBS. '+
+      'Pega la URL del Apps Script propio de Capacitaciones en la linea '+
+      '<b>SCRIPT_URL</b> del archivo.'
+    : '<b>Falta configurar la conexion.</b><br>Abre este archivo con el Bloc de notas, '+
+      'busca la linea <b>SCRIPT_URL</b> y pega ahi la URL que termina en <b>/exec</b> '+
+      'de tu Apps Script de Capacitaciones.';
+}
+
+var TIPOS = [
+  {id:'Memorando', label:'Memorando', icon:'&#x1F4CB;', color:'#0f5257'},
+  {id:'Oficio', label:'Oficio', icon:'&#x1F4C4;', color:'#7a2e5e'},
+  {id:'Circulares', label:'Circular', icon:'&#x1F514;', color:'#b35c00'}
+];
+
+var TODOS_TIPOS = ['Memorando','Oficio','Circulares'];
+
+/* El sistema arranca solo con el administrador. Los demas usuarios los
+   crea el admin desde el boton "Usuarios", y quedan guardados en la hoja
+   Cap_Usuarios. Esta lista solo se usa la primera vez, cuando esa hoja
+   todavia esta vacia. */
+var USUARIOS = [
+  {id:'admin', nombre:'Administrador', pass:'admin2026', rol:'admin', tabs:TODOS_TIPOS.slice(), protegido:true}
+];
+
+var DB = {};
+for(var ti=0; ti<TIPOS.length; ti++){ DB[TIPOS[ti].id] = []; }
+
+var BITACORA = [];
+var usuarioActual = null;
+var tipoActual = 'Memorando';
+var editIdx = null;
+var editNo = null; // Número original del registro en edición
+var sortCol = null;
+var sortAsc = true;
+var reloadTimer = null;
+var guardandoAhora = false;
+var cargandoAhora = false;
+
+/* ===== NUMERACION =====
+   Ya no se apartan numeros. El correlativo lo asigna el servidor
+   dentro de un candado, en el instante en que escribe la fila.
+   Nada que reservar, nada que liberar, nada que se quede trabado. */
+var resPollTimer = null;   // temporizador heredado; se mantiene apagado
+var RES_LS_KEY        = 'cap_reservas_locales'; // reservas tomadas por ESTE navegador (sobrevive a un F5)
+
+function showLoad(txt){ document.getElementById('load-txt').textContent = txt||'Procesando...'; document.getElementById('loading').classList.add('show'); }
+function hideLoad(){ document.getElementById('loading').classList.remove('show'); }
+function toast(msg, tipo){ var t=document.getElementById('toast'); t.textContent=msg; t.className='toast '+(tipo||'success')+' show'; setTimeout(function(){ t.classList.remove('show'); },3000); }
+function syncStatus(e,txt){ document.getElementById('sync-dot').className='sync-dot s-'+e; document.getElementById('sync-txt').textContent=txt; }
+function getTipo(id){ for(var i=0;i<TIPOS.length;i++){if(TIPOS[i].id===id)return TIPOS[i];}return TIPOS[0]; }
+
+function rebuildLoginSelect(){
+  var sel = document.getElementById('l-usuario');
+  var prev = sel.value;
+  sel.innerHTML = '<option value="">Seleccione su nombre</option>';
+  for(var i=0;i<USUARIOS.length;i++){
+    var u=USUARIOS[i];
+    var o=document.createElement('option');
+    o.value=u.id; o.textContent=u.nombre+(u.rol==='admin'?' (Admin)':'');
+    sel.appendChild(o);
+  }
+  if(prev) sel.value=prev;
+}
+
+function apiGet(tipo,cb){
+  var cbName='_gs_'+tipo.replace(/[^a-z]/gi,'')+'_'+nombreCallback();
+  var s=document.createElement('script');
+  var done=false;
+  var t=setTimeout(function(){if(!done){done=true;cb(new Error('Timeout'));}delete window[cbName];if(s.parentNode)s.parentNode.removeChild(s);},15000);
+  window[cbName]=function(data){if(!done){done=true;clearTimeout(t);cb(null,data);}delete window[cbName];if(s.parentNode)s.parentNode.removeChild(s);};
+  s.onerror=function(){if(!done){done=true;clearTimeout(t);cb(new Error('Error'));}delete window[cbName];};
+  s.src=SCRIPT_URL+'?accion=leer&tipo='+hojaDe(tipo)+'&callback='+cbName+'&_='+Date.now();
+  document.head.appendChild(s);
+}
+
+/* Nombre unico para cada peticion JSONP.
+   Antes se usaba solo Date.now(): dos peticiones lanzadas en el MISMO
+   milisegundo (la cola cada 5 s y el refresco cada 30 s se cruzan a
+   menudo) recibian el mismo nombre, la segunda pisaba a la primera y
+   el callback de la primera NUNCA se ejecutaba. La cola se quedaba con
+   colaEnviando=true y ya no volvia a enviar nada: "solo sale
+   reintentando". */
+var _cbSeq = 0;
+function nombreCallback(){
+  _cbSeq++;
+  return Date.now().toString(36) + '_' + _cbSeq + '_' + Math.random().toString(36).slice(2,8);
+}
+
+function apiPost(body,cb){
+  /* Traduce el nombre de la pestana al de Capacitaciones (Cap_...) justo
+     antes de salir. Adentro la app sigue usando Memorando / Oficio /
+     Circulares, asi que nada mas del codigo tuvo que cambiar. */
+  if(body && body.tipo){
+    var _b={}; for(var _k in body){ if(body.hasOwnProperty(_k)) _b[_k]=body[_k]; }
+    _b.tipo = hojaDe(body.tipo);
+    body = _b;
+  }
+  var cbName='_gsp_'+nombreCallback();
+  var s=document.createElement('script');
+  var done=false;
+  var t=setTimeout(function(){if(!done){done=true;cb(new Error('Timeout'));}delete window[cbName];if(s.parentNode)s.parentNode.removeChild(s);},15000);
+  window[cbName]=function(data){if(!done){done=true;clearTimeout(t);cb(null,data);}delete window[cbName];if(s.parentNode)s.parentNode.removeChild(s);};
+  s.onerror=function(){if(!done){done=true;clearTimeout(t);cb(new Error('Error'));}delete window[cbName];};
+  s.src=SCRIPT_URL+'?data='+encodeURIComponent(JSON.stringify(body))+'&callback='+cbName+'&_='+Date.now();
+  document.head.appendChild(s);
+}
+
+function cargarUsuarios(cb){
+  apiGet('Usuarios', function(err, rows){
+    if(err){ if(cb) cb(); return; }
+    if(!Array.isArray(rows) || rows.length === 0){
+      guardarUsuariosEnSheets();
+      rebuildLoginSelect();
+      if(cb) cb();
+      return;
+    }
+    var lista = [];
+    for(var i=0; i<rows.length; i++){
+      var r=rows[i];
+      if(!r[0]||String(r[0]).trim()==='') continue;
+      if(String(r[0]).toLowerCase()==='id') continue;
+      var tabsStr = String(r[5]||'');
+      var tabsArr = tabsStr ? tabsStr.split('|') : TODOS_TIPOS.slice();
+      if(!tabsArr || tabsArr.length===0 || (tabsArr.length===1 && tabsArr[0]==='')) {
+        tabsArr = TODOS_TIPOS.slice();
+      }
+      lista.push({
+        id: String(r[0]),
+        nombre: String(r[1]||''),
+        pass: String(r[2]||''),
+        rol: String(r[3]||'usuario'),
+        protegido: r[4]==='true'||r[4]===true,
+        tabs: tabsArr
+      });
+    }
+    USUARIOS = lista.length > 0 ? lista : USUARIOS;
+    rebuildLoginSelect();
+    if(cb) cb();
+  });
+}
+
+function guardarUsuariosEnSheets(){
+  var filas = [];
+  for(var i=0; i<USUARIOS.length; i++){
+    var u=USUARIOS[i];
+    var tabsStr=(u.tabs||TODOS_TIPOS).join('|');
+    filas.push([u.id, u.nombre, u.pass, u.rol, u.protegido?'true':'false', tabsStr]);
+  }
+  apiPost({accion:'reescribir', tipo:'Usuarios', filas:filas}, function(err,res){
+    if(!err&&res&&res.ok) syncStatus('ok','Sincronizado');
+    else syncStatus('err','Error guardando usuarios');
+  });
+}
+
+document.getElementById('ver-app').textContent = 'v' + VERSION_APP;
+
+if(!appConfigurada()){
+  avisoConfiguracion();
+} else {
+  document.getElementById('l-usuario').innerHTML = '<option value="">Cargando usuarios...</option>';
+  document.getElementById('btn-ingresar').disabled = true;
+  cargarUsuarios(function(){
+    rebuildLoginSelect();
+    document.getElementById('btn-ingresar').disabled = false;
+  });
+}
+
+document.getElementById('btn-ingresar').addEventListener('click', function(){ doLogin(); });
+document.getElementById('l-pass').addEventListener('keydown', function(e){ if(e.key==='Enter') doLogin(); });
+
+function doLogin(){
+  var uid = document.getElementById('l-usuario').value;
+  var pass = document.getElementById('l-pass').value;
+  var err = document.getElementById('login-error');
+  if(!uid){ err.textContent='Seleccione un usuario.'; err.style.display='block'; return; }
+  document.getElementById('btn-ingresar').disabled=true;
+  err.style.display='none';
+  if(!pass){ err.textContent='Escriba su contrasena.'; err.style.display='block';
+             document.getElementById('btn-ingresar').disabled=false; return; }
+  function buscarUsuario(){
+    for(var i=0;i<USUARIOS.length;i++){
+      if(USUARIOS[i].id===uid && String(USUARIOS[i].pass)===String(pass)) return USUARIOS[i];
+    }
+    return null;
+  }
+  // Validar primero contra la lista ya cargada (instantaneo).
+  // Solo consultar Sheets de nuevo si la validacion falla (por si cambiaron la clave).
+  var u=buscarUsuario();
+  if(u){ completarLogin(u); return; }
+  cargarUsuarios(function(){
+    var u2=buscarUsuario();
+    document.getElementById('btn-ingresar').disabled=false;
+    if(!u2){ err.textContent='Usuario o contrasena incorrectos.'; err.style.display='block'; return; }
+    completarLogin(u2);
+  });
+  function completarLogin(u){
+    document.getElementById('btn-ingresar').disabled=false;
+    err.style.display='none';
+    usuarioActual=u;
+    document.getElementById('hdr-nombre').textContent=u.nombre;
+    document.getElementById('hdr-rol').textContent=u.rol==='admin'?'Administrador':'Usuario';
+    document.getElementById('hdr-avatar').textContent=u.nombre.charAt(0).toUpperCase();
+    document.getElementById('btn-usuarios').style.display=u.rol==='admin'?'':'none';
+    document.getElementById('btn-actividad').style.display=u.rol==='admin'?'':'none';
+    document.getElementById('btn-importar').style.display=u.rol==='admin'?'':'none';
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('app').style.display='block';
+    construirTabs();
+    var permitidos2=tiposPermitidos();
+    if(permitidos2.length>0) cambiarTab(permitidos2[0].id, true);
+    // Carga completa UNA sola vez al entrar
+    cargarDatos(false);
+    verificarBackend();     // ¿el Apps Script ya es el nuevo?
+    iniciarCola();          // reanuda lo que quedo pendiente de enviar
+    clearInterval(reloadTimer);
+    reloadTimer=setInterval(function(){ if(!guardandoAhora && !cargandoAhora){ try{cargarDatos(true);}catch(e){} } },30000);
+    // Reservas: se refrescan mas seguido para ver rapido lo que toman los demas
+    clearInterval(resPollTimer);   // ya no se sondean reservas: no existen
+  }
+}
+
+function intentarSalir(){
+  if(confirmarAbierto()) return;
+  var nota = COLA.length
+    ? 'Quedan '+COLA.length+' registro(s) sin enviar. No se pierden: se reenvian al volver a entrar.'
+    : 'Para volver a entrar tendras que elegir tu nombre y escribir tu contrasena.';
+  confirmar({
+    icono:'&#128682;', titulo:'Cerrar sesion',
+    mensaje:'Vas a cerrar tu sesion'+(usuarioActual?', <b>'+usuarioActual.nombre+'</b>':'')+'.',
+    nota:nota, notaSuave:!COLA.length,
+    textoSi:'Si, cerrar', textoNo:'No, quedarme',
+    claseSi: COLA.length ? 'btn-danger' : 'btn-primary'
+  }, doLogout);
+}
+
+/* Esta app es independiente: no pertenece a ningun portal ni panel de
+   modulos. Al cerrar sesion se vuelve a su propia pantalla de ingreso. */
+function doLogout(){
+  clearInterval(reloadTimer);
+  clearInterval(resPollTimer);
+  usuarioActual=null;
+  document.getElementById('app').style.display='none';
+  var ls=document.getElementById('login-screen');
+  ls.classList.remove('hidden');
+  ls.style.display='flex';
+  document.getElementById('l-pass').value='';
+  document.getElementById('l-usuario').value='';
+  document.getElementById('login-error').style.display='none';
+  document.getElementById('btn-ingresar').disabled=false;
+}
+
+
+/* Si cierran la pestaña o recargan con F5 sin guardar, el numero se
+   devuelve de inmediato en vez de quedar apartado hasta que venza. */
+// Ya no hay numeros que devolver. Lo pendiente queda guardado en el
+// equipo y se reenvia solo la proxima vez que se abra el sistema.
+function avisarSalidaBrusca(){ colaGuardar(); }
+window.addEventListener('pagehide', avisarSalidaBrusca);
+
+// Al volver a la pestaña, refrescar de una vez en lugar de esperar el ciclo
+document.addEventListener('visibilitychange', function(){
+  if(document.visibilityState==='visible' && usuarioActual){
+    try{ procesarCola(true); }catch(e){}
+  }
+});
+
+function tiposPermitidos(){
+  if(!usuarioActual) return TIPOS;
+  if(usuarioActual.rol==='admin') return TIPOS;
+  var tabs = usuarioActual.tabs;
+  if(typeof tabs === 'string') tabs = tabs ? tabs.split('|') : TODOS_TIPOS.slice();
+  if(!tabs || tabs.length===0) tabs = TODOS_TIPOS.slice();
+  return TIPOS.filter(function(t){ return tabs.indexOf(t.id)!==-1; });
+}
+
+function construirTabs(){
+  var bar=document.getElementById('tabs-bar');
+  bar.innerHTML='';
+  var permitidos=tiposPermitidos();
+  for(var i=0;i<permitidos.length;i++){
+    var t=permitidos[i];
+    var btn=document.createElement('button');
+    btn.className='tab-btn'; btn.setAttribute('data-t',t.id);
+    btn.innerHTML='<span class="ti">'+t.icon+'</span><span class="tl">'+t.label+'</span><span class="tc">0</span>';
+    (function(tid){ btn.onclick=function(){ cambiarTab(tid); }; })(t.id);
+    bar.appendChild(btn);
+  }
+  actualizarTabs();
+}
+
+function actualizarTabs(){
+  var bar=document.getElementById('tabs-bar');
+  if(!bar) return;
+  var btns=bar.getElementsByTagName('button');
+  for(var i=0;i<btns.length;i++){
+    var tid=btns[i].getAttribute('data-t');
+    var t=getTipo(tid);
+    btns[i].innerHTML='<span class="ti">'+t.icon+'</span><span class="tl">'+t.label+'</span><span class="tc">'+(DB[tid]?DB[tid].length:0)+'</span>';
+    btns[i].className='tab-btn'+(tid===tipoActual?' active':'');
+  }
+}
+
+function actualizarCabeceras(){
+  var th=document.getElementById('t-head');
+  var esHoja=(tipoActual==='Instruccion'), esCirug=(tipoActual==='Cirugia');
+  var r='<tr>';
+  if(esCirug){
+    r+='<th onclick="ord(\'no\')">N</th><th onclick="ord(\'remite\')">A Quien</th><th onclick="ord(\'clave\')">Clave</th><th onclick="ord(\'centro\')">Centro de Trabajo</th><th onclick="ord(\'fecha\')">Fecha</th><th onclick="ord(\'hospital\')">Hospital</th><th onclick="ord(\'monto\')">Monto Cotizacion</th><th onclick="ord(\'diagnostico\')">Diagnostico</th><th>Acciones</th>';
+  } else {
+    r+='<th onclick="ord(\'no\')">N</th><th onclick="ord(\'remite\')">A quien se remite</th><th onclick="ord(\'resp\')">Realizado por</th><th onclick="ord(\'fecha\')">Fecha</th><th onclick="ord(\'asunto\')">Asunto</th>';
+    if(esHoja) r+='<th onclick="ord(\'fact\')">Fecha Actividad</th>';
+    r+='<th>Acciones</th>';
+  }
+  th.innerHTML=r+'</tr>';
+}
+
+function cambiarTab(tipo, sinRecarga){
+  tipoActual=tipo; sortCol=null; sortAsc=true;
+  document.getElementById('buscar').value='';
+  document.getElementById('filtro-dest').value='';
+  document.getElementById('filtro-resp').value='';
+  document.getElementById('filtro-anio').value=String(new Date().getFullYear());
+  var t=getTipo(tipo);
+  document.getElementById('tipo-label').innerHTML='<span class="tipo-badge" style="background:'+t.color+'">'+t.icon+' '+t.label+'</span>';
+  actualizarCabeceras(); actualizarTabs(); poblarResp(); render();
+  // Recargar SOLO el tipo activo (1 peticion), no los 6 tipos
+  if(!sinRecarga) setTimeout(function(){ try{cargarTipo(tipo);}catch(e){} },100);
+}
+
+// Recarga un solo tipo de documento (mucho mas rapido que cargarDatos)
+function cargarTipo(tipo, cb){
+  syncStatus('load','Sincronizando...');
+  apiGet(tipo,function(err,rows){
+    if(!err&&Array.isArray(rows)&&!guardandoAhora){
+      DB[tipo]=filtrarFilas(rows, tipo);
+      syncStatus('ok','Sincronizado');
+    } else if(err){
+      syncStatus('err','Sin conexion');
+    } else {
+      syncStatus('ok','Sincronizado');
+    }
+    if(tipo===tipoActual){ actualizarTabs(); poblarResp(); render(); }
+    else actualizarTabs();
+    if(cb) cb(err);
+  });
+}
+
+function limpiarFecha(v){
+  if(!v) return '';
+  var s = String(v);
+  if(s.indexOf('T') !== -1) {
+    var d = new Date(s);
+    if(!isNaN(d)){
+      var dd=String(d.getUTCDate()).padStart(2,'0');
+      var mm=String(d.getUTCMonth()+1).padStart(2,'0');
+      var yy=String(d.getUTCFullYear()).slice(2);
+      return dd+'/'+mm+'/'+yy;
+    }
+  }
+  return s;
+}
+
+function filaAObj(f){
+  return {
+    no:          Number(f[0])||0,
+    remite:      String(f[1]||''),
+    resp:        String(f[2]||''),
+    fecha:       limpiarFecha(f[3]),
+    asunto:      String(f[4]||''),
+    fact:        limpiarFecha(f[5]),
+    clave:       '',
+    centro:      '',
+    hospital:    '',
+    monto:       String(f[6]||''),
+    diagnostico: String(f[7]||''),
+    anio:        String(f[11]||f[8]||''),
+    nueva:       false
+  };
+}
+
+function filaAObjCirug(f){
+  return {
+    no:          Number(f[0])||0,
+    remite:      String(f[1]||''),
+    clave:       String(f[2]||''),
+    centro:      String(f[3]||''),
+    fecha:       limpiarFecha(f[4]),
+    hospital:    String(f[5]||''),
+    monto:       String(f[6]||''),
+    diagnostico: String(f[7]||''),
+    anio:        String(f[8]||''),
+    resp:'', asunto:'', fact:'', nueva:false
+  };
+}
+
+// Peticion JSONP a leerTodo: trae los 6 tipos en una sola llamada
+function apiGetTodo(cb){
+  var cbName='_gst_'+nombreCallback();
+  var s=document.createElement('script');
+  var done=false;
+  var t=setTimeout(function(){if(!done){done=true;cb(new Error('Timeout'));}delete window[cbName];if(s.parentNode)s.parentNode.removeChild(s);},20000);
+  window[cbName]=function(data){if(!done){done=true;clearTimeout(t);cb(null,data);}delete window[cbName];if(s.parentNode)s.parentNode.removeChild(s);};
+  s.onerror=function(){if(!done){done=true;clearTimeout(t);cb(new Error('Error'));}delete window[cbName];};
+  s.src=SCRIPT_URL+'?accion=leerTodo&callback='+cbName+'&_='+Date.now();
+  document.head.appendChild(s);
+}
+
+function filtrarFilas(rows, tipo){
+  return rows.filter(function(r){
+    if(!r[0]) return false;
+    var v=String(r[0]).trim().toLowerCase();
+    if(v===''||v==='no'||v==='n'||v==='n°'||isNaN(Number(r[0]))) return false;
+    return true;
+  }).map(tipo==='Cirugia'?filaAObjCirug:filaAObj);
+}
+
+function cargarDatos(silencioso){
+  if(cargandoAhora){ return; } // evitar recargas solapadas
+  cargandoAhora = true;
+  if(!silencioso) showLoad('Cargando datos...');
+  syncStatus('load','Sincronizando...');
+  // Intentar leerTodo (1 sola peticion para los 6 tipos)
+  apiGetTodo(function(err, data){
+    if(!err && data && !data.error && typeof data==='object' && !Array.isArray(data)){
+      if(!guardandoAhora){
+        for(var i=0;i<TIPOS.length;i++){
+          var tid=TIPOS[i].id;
+          if(Array.isArray(data[tid])) DB[tid]=filtrarFilas(data[tid], tid);
+        }
+      }
+      cargandoAhora = false;
+      syncStatus('ok','Sincronizado');
+      actualizarTabs(); poblarResp(); render();
+      if(!silencioso) hideLoad();
+    } else {
+      // Respaldo: metodo anterior de 6 peticiones (por si el Apps Script
+      // desplegado aun no tiene la accion leerTodo)
+      cargarDatosIndividual(silencioso);
+    }
+  });
+}
+
+function cargarDatosIndividual(silencioso){
+  var pending=TIPOS.length, errs=0;
+  for(var i=0;i<TIPOS.length;i++){
+    (function(t){
+      apiGet(t.id,function(err,rows){
+        if(!err&&Array.isArray(rows)&&!guardandoAhora){
+          DB[t.id]=filtrarFilas(rows, t.id);
+        } else if(err) errs++;
+        pending--;
+        if(pending===0){
+          cargandoAhora = false;
+          syncStatus(errs===0?'ok':'err',errs===0?'Sincronizado':'Sin conexion');
+          actualizarTabs(); poblarResp(); render();
+          if(!silencioso) hideLoad();
+        }
+      });
+    })(TIPOS[i]);
+  }
+}
+
+function recargar(){ cargarDatos(false); toast('Datos actualizados'); }
+
+/* ============================================================
+   CONFIRMACION PARA ACCIONES DESTRUCTIVAS
+   Toda accion que borre o descarte algo pasa por aqui.
+   ============================================================ */
+var _cfCallback = null;
+
+function confirmar(op, cb){
+  var ov = document.getElementById('modal-confirmar');
+  document.getElementById('cf-ico').innerHTML  = op.icono   || '&#9888;';
+  document.getElementById('cf-titulo').textContent = op.titulo || 'Confirmar';
+  var html = op.mensaje || 'Esta seguro?';
+  if(op.nota) html += '<div class="conf-nota'+(op.notaSuave?' aviso':'')+'">'+op.nota+'</div>';
+  document.getElementById('cf-msg').innerHTML = html;
+  var si = document.getElementById('cf-si');
+  si.textContent = op.textoSi || 'Si, continuar';
+  si.className = 'btn ' + (op.claseSi || 'btn-danger');
+  document.getElementById('cf-no').textContent = op.textoNo || 'No, regresar';
+  _cfCallback = cb;
+  ov.classList.add('show');
+  setTimeout(function(){ si.focus(); }, 60);
+}
+
+function cerrarConfirmar(resultado){
+  document.getElementById('modal-confirmar').classList.remove('show');
+  var cb = _cfCallback; _cfCallback = null;
+  if(resultado && cb) cb();
+}
+
+function confirmarAbierto(){
+  return document.getElementById('modal-confirmar').classList.contains('show');
+}
+
+function pintarReservas(){
+  var el=document.getElementById('res-info'); if(!el) return;
+  var n=COLA.length;
+  if(!n){ el.innerHTML=''; return; }
+  el.innerHTML='<span class="res-info">&#8987; '+n+' pendiente'+(n>1?'s':'')+' de enviar</span>';
+}
+
+// El usuario decide botar un registro que no se pudo enviar
+function descartarPendiente(opId){
+  var it=null;
+  for(var i=0;i<COLA.length;i++) if(COLA[i].opId===opId) it=COLA[i];
+  if(!it) return;
+  confirmar({
+    icono:'&#128465;', titulo:'Descartar pendiente',
+    mensaje:'Vas a descartar el registro para <b>'+(it.remite||'(sin destinatario)')+'</b>, que todavia no se ha enviado.',
+    nota:'Se pierde lo que se escribio y no queda ningun numero usado. Si ya se habia escrito en la hoja, seguira ahi.',
+    textoSi:'Si, descartar', textoNo:'No, dejarlo'
+  }, function(){ quitarDeCola(opId); render(); pintarReservas(); toast('Pendiente descartado'); });
+}
+
+function formatMonto(v){
+  if(!v) return '';
+  var n = parseFloat(String(v).replace(/[^0-9.]/g,''));
+  if(isNaN(n)) return 'L. '+v;
+  return 'L '+n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+
+function poblarResp(){
+  var resps=[];
+  var datos=DB[tipoActual]||[];
+  for(var i=0;i<datos.length;i++){
+    if(datos[i].resp&&resps.indexOf(datos[i].resp.trim())===-1) resps.push(datos[i].resp.trim());
+  }
+  resps.sort();
+  var sel=document.getElementById('filtro-resp');
+  var prev=sel.value;
+  sel.innerHTML='<option value="">Todos</option>';
+  for(var j=0;j<resps.length;j++) sel.innerHTML+='<option value="'+resps[j]+'">'+resps[j]+'</option>';
+  sel.value=prev;
+  poblarDestinatarios();
+  poblarAnios();
+}
+
+/* Los filtros no traen nada fijo de antemano: se van armando solos con los
+   valores que realmente aparecen en los documentos capturados. Si manana
+   escriben un destinatario nuevo, al refrescar ya sale en la lista. */
+function poblarDestinatarios(){
+  var datos=DB[tipoActual]||[];
+  var dests=[];
+  for(var i=0;i<datos.length;i++){
+    var v=(datos[i].remite||'').trim();
+    if(v && dests.indexOf(v)===-1) dests.push(v);
+  }
+  dests.sort(function(a,b){ return a.localeCompare(b,'es',{sensitivity:'base'}); });
+  var sel=document.getElementById('filtro-dest');
+  var prev=sel.value;
+  sel.innerHTML='<option value="">Todos</option>';
+  for(var j=0;j<dests.length;j++){
+    var t=dests[j].replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    sel.innerHTML+='<option value="'+t+'">'+t+'</option>';
+  }
+  sel.value=prev;
+  if(sel.value!==prev) sel.value='';   // el destinatario anterior ya no existe
+}
+
+function poblarAnios(){
+  var datos=DB[tipoActual]||[];
+  var anios=[];
+  var anioActual=String(new Date().getFullYear());
+  for(var i=0;i<datos.length;i++){
+    var a=datos[i].anio||anioActual;
+    if(anios.indexOf(a)===-1) anios.push(a);
+  }
+  anios.sort().reverse();
+  var sel=document.getElementById('filtro-anio');
+  var prev=sel.value||anioActual;
+  sel.innerHTML='<option value="">Todos</option>';
+  for(var j=0;j<anios.length;j++) sel.innerHTML+='<option value="'+anios[j]+'">'+anios[j]+'</option>';
+  if(anios.indexOf(anioActual)!==-1) sel.value=prev||anioActual;
+  else sel.value=prev;
+}
+
+function render(){
+  var q=document.getElementById('buscar').value.toLowerCase();
+  var resp=document.getElementById('filtro-resp').value;
+  var dest=document.getElementById('filtro-dest').value;
+  var anioFil=document.getElementById('filtro-anio').value;
+  var anioActual2=String(new Date().getFullYear());
+  var datos=DB[tipoActual]||[];
+  // Numeros repetidos: marca los duplicados que ya existan en la hoja
+  var _cta={}, DUP={};
+  for(var z=0;z<datos.length;z++){
+    var kz=(datos[z].anio||anioActual2)+'#'+datos[z].no;
+    _cta[kz]=(_cta[kz]||0)+1;
+    if(_cta[kz]>1) DUP[kz]=true;
+  }
+  var esHoja=(tipoActual==='Instruccion'), esCirug=(tipoActual==='Cirugia');
+  var filtrados=[];
+  for(var i=0;i<datos.length;i++){
+    var d=datos[i];
+    var txt=(d.no+' '+d.remite+' '+d.resp+' '+d.fecha+' '+(d.asunto||'')+(d.diagnostico||'')+(d.clave||'')+(d.hospital||'')).toLowerCase();
+    var dAnio = d.anio || anioActual2;
+    if(
+      (!q||txt.indexOf(q)!==-1) &&
+      (!resp||d.resp.trim()===resp) &&
+      (!dest||(d.remite||'').trim()===dest) &&
+      (!anioFil||dAnio===anioFil)
+    ) filtrados.push(d);
+  }
+  if(sortCol){
+    filtrados.sort(function(a,b){
+      var va=a[sortCol],vb=b[sortCol];
+      if(sortCol==='no') return sortAsc?va-vb:vb-va;
+      return sortAsc?String(va||'').localeCompare(String(vb||''),'es'):String(vb||'').localeCompare(String(va||''),'es');
+    });
+  } else {
+    filtrados.reverse();
+  }
+  var tbody=document.getElementById('t-body');
+  tbody.innerHTML='';
+  var cols=esCirug?9:(esHoja?7:6);
+  if(!filtrados.length){
+    tbody.innerHTML='<tr class="empty-row"><td colspan="'+cols+'">Sin registros en esta seccion.</td></tr>';
+  } else {
+    for(var j=0;j<filtrados.length;j++){
+      var d=filtrados[j];
+      var ri=datos.indexOf(d);
+      var tr=document.createElement('tr');
+      if(d.nueva) tr.classList.add('nueva');
+      var btnE='<button class="btn btn-primary btn-sm" onclick="editarPorNo('+d.no+')">Editar</button>';
+      var btnD='<button class="btn btn-danger btn-sm" style="margin-left:4px" onclick="eliminarPorNo('+d.no+')">Borrar</button>';
+      var _dup = DUP[(d.anio||anioActual2)+'#'+d.no];
+      if(_dup) tr.classList.add('duplicada');
+      var html='<td class="num">'+d.no+(_dup?' <span class="dup-badge" title="Hay mas de un registro con este numero">REPETIDO</span>':'')+'</td>';
+      if(esCirug){
+        html+='<td>'+(d.remite||'')+'</td><td>'+(d.clave||'')+'</td><td>'+(d.centro||'')+'</td><td class="fecha">'+(d.fecha||'')+'</td><td>'+(d.hospital||'')+'</td><td style="text-align:right;font-weight:600">'+(d.monto?formatMonto(d.monto):'')+'</td><td class="asunto">'+(d.diagnostico||'')+'</td>';
+      } else {
+        html+='<td style="font-weight:500">'+(d.remite||'')+'</td><td class="realizado">'+(d.resp||'')+'</td><td class="fecha">'+(d.fecha||'')+'</td><td class="asunto">'+(d.asunto||'')+'</td>';
+        if(esHoja) html+='<td class="fecha">'+(d.fact||'')+'</td>';
+      }
+      html+='<td style="white-space:nowrap">'+btnE+btnD+'</td>';
+      tr.innerHTML=html;
+      tbody.appendChild(tr);
+    }
+  }
+  // Filas pendientes: registros en cola que aun no confirma el servidor
+  var sinFiltros = (!q && !resp && !dest && (!anioFil || anioFil===anioActual2));
+  if(sinFiltros){
+    var pend = colaPendientes(tipoActual);
+    for(var k=pend.length-1;k>=0;k--){
+      var it=pend[k];
+      var trR=document.createElement('tr');
+      trR.className='reservada';
+      var espera = it.proximo && it.proximo>Date.now()
+        ? Math.ceil((it.proximo-Date.now())/1000)+' s' : '';
+      var medio;
+      if(!enLinea()){
+        medio='<span class="res-badge">PENDIENTE</span> &nbsp;Sin conexion — <b>'+
+              (it.remite||'(sin destinatario)')+'</b> se enviara solo al volver la señal';
+      } else if(it.intentos>0){
+        medio='<span class="res-badge">PENDIENTE</span> &nbsp;<b>'+(it.remite||'(sin destinatario)')+
+              '</b> — reintentando'+(espera?' en '+espera:'')+' (intento '+it.intentos+')';
+      } else {
+        medio='<span class="res-badge">PENDIENTE</span> &nbsp;Enviando <b>'+
+              (it.remite||'(sin destinatario)')+'</b>... el N se asigna al confirmar';
+      }
+      var acc='<button class="btn btn-danger btn-sm" onclick="descartarPendiente(\''+it.opId+'\')">Descartar</button>';
+      trR.innerHTML='<td class="num">—</td><td colspan="'+(cols-2)+'">'+medio+'</td><td style="white-space:nowrap">'+acc+'</td>';
+      tbody.insertBefore(trR, tbody.firstChild);
+    }
+  }
+  document.getElementById('vis-count').textContent=filtrados.length;
+  document.getElementById('total-count').textContent=datos.length;
+  pintarReservas();
+}
+
+function ord(col){ if(sortCol===col) sortAsc=!sortAsc; else{sortCol=col;sortAsc=true;} render(); }
+
+function abrirModal(idx){
+  editIdx=(idx!==undefined)?idx:null;
+  var datos=DB[tipoActual]||[];
+  var m=editIdx!==null?datos[editIdx]:null;
+  var t=getTipo(tipoActual);
+  document.getElementById('m-icon').innerHTML=t.icon;
+  document.getElementById('m-titulo').textContent=m?'Editar '+t.label:'Nuevo '+t.label;
+  var esCirug=(tipoActual==='Cirugia'), esHoja=(tipoActual==='Instruccion');
+  document.getElementById('campos-std').style.display=esCirug?'none':'';
+  document.getElementById('campos-cirug').style.display=esCirug?'':'none';
+  document.getElementById('campo-fact').style.display=esHoja?'':'none';
+
+  var _hoy=(function(){
+    var d=new Date();
+    var dd=String(d.getDate()).padStart(2,'0');
+    var mm=String(d.getMonth()+1).padStart(2,'0');
+    var yy=String(d.getFullYear()).slice(2);
+    return dd+'/'+mm+'/'+yy;
+  })();
+
+  if(esCirug){
+    document.getElementById('m-fecha').value=m?(m.fecha||''):_hoy;
+    document.getElementById('m-cir-remite').value=m?(m.remite||''):'';
+    document.getElementById('m-cir-clave').value=m?(m.clave||''):'';
+    document.getElementById('m-cir-centro').value=m?(m.centro||''):'';
+    document.getElementById('m-cir-hospital').value=m?(m.hospital||''):'';
+    document.getElementById('m-cir-monto').value=m?(m.monto||''):'';
+    document.getElementById('m-cir-diag').value=m?(m.diagnostico||''):'';
+  } else {
+    document.getElementById('m-remite').value=m?m.remite:'';
+    document.getElementById('m-resp').value=m?m.resp:(usuarioActual?usuarioActual.nombre:'');
+    document.getElementById('m-fecha').value=m?m.fecha:_hoy;
+    document.getElementById('m-asunto').value=m?m.asunto:'';
+    document.getElementById('m-fact').value=m?(m.fact||''):'';
+  }
+
+  var campoNo   = document.getElementById('m-no');
+  var chip      = document.getElementById('m-res-estado');
+  var btnG      = document.getElementById('btn-guardar');
+  campoNo.className='no-field';
+  chip.className='res-chip';
+  chip.innerHTML='';
+
+  if(m){
+    // EDITAR: guardar número en variable global protegida
+    var noOriginal = m.no;
+    editNo = noOriginal;
+    campoNo.value=noOriginal;
+    btnG.disabled=false;
+    syncStatus('ok','Listo');
+  } else {
+    editNo = null;
+    // NUEVO: ya NO se aparta ningun numero. El correlativo lo asigna el
+    // servidor en el instante en que se guarda, dentro de un candado.
+    // Esto es lo que impide que dos personas tomen el mismo N.
+    if(BACKEND_OK===false){
+      campoNo.value='No disponible';
+      btnG.disabled=true;
+      chip.className='res-chip warn show';
+      chip.innerHTML='&#9888; <b>Falta publicar la version '+VERSION_MINIMA+' del Apps Script</b>'+(BACKEND_VER?' (el servidor responde la '+BACKEND_VER+')':'')+'. '+
+                     'Hasta entonces no se pueden crear registros: el servidor los guardaria sin numero. '+
+                     'Editar y borrar si funcionan.';
+      document.getElementById('modal-doc').classList.add('show');
+      modalSnapshot = fotoModal();
+      return;
+    }
+    var aprox = numeroAproximado(tipoActual);
+    campoNo.value = 'Se asigna al guardar';
+    campoNo.className = 'no-field';
+    btnG.disabled = false;               // se puede escribir de una vez
+    chip.className = 'res-chip ok show';
+    chip.innerHTML = '&#128221; El numero se asigna al guardar (sera aprox. el <b>N ' + aprox +
+                     '</b>). Nadie mas puede quedarse con el tuyo.';
+    syncStatus('ok', enLinea() ? 'Listo' : 'Sin conexion — se enviara al volver');
+  }
+  document.getElementById('modal-doc').classList.add('show');
+  modalSnapshot = fotoModal();
+}
+
+function abrirModalDirecto(m){
+  var datos=DB[tipoActual]||[];
+  editIdx=datos.findIndex(function(d){return d.no===m.no;});
+  var t=getTipo(tipoActual);
+  document.getElementById('m-icon').innerHTML=t.icon;
+  document.getElementById('m-titulo').textContent='Editar '+t.label;
+  var esCirug=(tipoActual==='Cirugia'), esHoja=(tipoActual==='Instruccion');
+  document.getElementById('campos-std').style.display=esCirug?'none':'';
+  document.getElementById('campos-cirug').style.display=esCirug?'':'none';
+  document.getElementById('campo-fact').style.display=esHoja?'':'none';
+  var _hoy=(function(){
+    var d=new Date();
+    return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+String(d.getFullYear()).slice(2);
+  })();
+  if(esCirug){
+    document.getElementById('m-fecha').value=m.fecha||_hoy;
+    document.getElementById('m-cir-remite').value=m.remite||'';
+    document.getElementById('m-cir-clave').value=m.clave||'';
+    document.getElementById('m-cir-centro').value=m.centro||'';
+    document.getElementById('m-cir-hospital').value=m.hospital||'';
+    document.getElementById('m-cir-monto').value=m.monto||'';
+    document.getElementById('m-cir-diag').value=m.diagnostico||'';
+  } else {
+    document.getElementById('m-remite').value=m.remite||'';
+    document.getElementById('m-resp').value=m.resp||'';
+    document.getElementById('m-fecha').value=m.fecha||_hoy;
+    document.getElementById('m-asunto').value=m.asunto||'';
+    document.getElementById('m-fact').value=m.fact||'';
+  }
+  // Guardar número original en variable global protegida
+  editNo = m.no;
+  document.getElementById('m-no').value=m.no;
+  document.getElementById('m-no').className='no-field';
+  document.getElementById('m-res-estado').className='res-chip';
+  document.getElementById('btn-guardar').disabled=false;
+  syncStatus('ok','Listo');
+  document.getElementById('modal-doc').classList.add('show');
+  modalSnapshot = fotoModal();
+}
+var CAMPOS_MODAL = ['m-fecha','m-remite','m-resp','m-asunto','m-fact','m-cir-remite','m-cir-clave',
+                    'm-cir-centro','m-cir-hospital','m-cir-monto','m-cir-diag'];
+var modalSnapshot = '';
+
+function fotoModal(){
+  var v=[];
+  for(var i=0;i<CAMPOS_MODAL.length;i++){
+    var el=document.getElementById(CAMPOS_MODAL[i]);
+    v.push(el?String(el.value).trim():'');
+  }
+  return v.join('|');
+}
+
+// Cancelar: pregunta antes de descartar lo escrito o soltar el numero apartado
+function intentarCerrarModal(){
+  if(confirmarAbierto()) return;
+  var huboCambios = (fotoModal() !== modalSnapshot);
+  var esNuevo = (editNo === null);
+  if(!huboCambios){ cerrarModal(); return; }
+
+  var msg, nota, suave=false;
+  if(esNuevo){
+    msg = 'Vas a cancelar este nuevo registro.';
+    nota = 'Se pierde lo que escribiste. No queda ningun numero usado: el N se asigna al guardar.';
+  } else {
+    msg = 'Vas a salir sin guardar los cambios del <b>N '+editNo+'</b>.';
+    nota = 'Los cambios que hiciste no se guardaran.';
+    suave = true;
+  }
+  confirmar({
+    icono:'&#9888;', titulo:'Cancelar sin guardar',
+    mensaje:msg, nota:nota, notaSuave:suave,
+    textoSi:'Si, cancelar', textoNo:'No, seguir aqui'
+  }, cerrarModal);
+}
+
+function cerrarModal(){
+  document.getElementById('modal-doc').classList.remove('show');
+  // Si habia un numero apartado y NO se guardo, devolverlo para que otro lo use
+  document.getElementById('m-res-estado').className='res-chip';
+  document.getElementById('m-no').className='no-field';
+  editIdx=null; editNo=null;
+}
+function editar(idx){ abrirModal(idx); }
+function editarPorNo(no){
+  var datos=DB[tipoActual]||[];
+  var idx=datos.findIndex(function(d){return d.no===no;});
+  if(idx!==-1) abrirModalDirecto(datos[idx]);
+  else alert('No se encontró registro N '+no);
+}
+function eliminarPorNo(no){
+  var datos=DB[tipoActual]||[];
+  var idx=datos.findIndex(function(d){return d.no===no;});
+  if(idx!==-1) eliminar(idx);
+}
+
+/* ============================================================
+   COLA DE ENVIO — GUARDADO A PRUEBA DE CORTES DE CONEXION
+
+   El problema de fondo: con JSONP no hay forma de distinguir
+   "la peticion no llego" de "llego, se escribio la fila, y se
+   perdio la respuesta de vuelta". Antes el usuario veia un error,
+   volvia a presionar Guardar y quedaban DOS memorandos.
+
+   La solucion tiene dos mitades:
+     - Aqui: el registro entra en una COLA guardada en el equipo.
+       Se reintenta solo, sobrevive a un F5 y espera si no hay
+       internet. El usuario nunca vuelve a llenar el formulario.
+     - En el Apps Script: cada envio lleva un opId unico. Si la
+       fila ya se escribio, el servidor devuelve el MISMO numero
+       en vez de crear otra. El reintento nunca duplica.
+
+   El numero ya no se aparta: lo asigna el servidor al escribir.
+   ============================================================ */
+
+var BACKEND_OK  = null;                   // null=sin comprobar, true=al dia, false=desactualizado
+var BACKEND_VER = 0;                      // version que reporta el Apps Script
+var COLA        = [];                     // registros pendientes de enviar
+var COLA_KEY    = 'cap_cola_envio';
+var colaTimer   = null;
+var colaEnviando= false;
+
+function enLinea(){ return (typeof navigator.onLine === 'boolean') ? navigator.onLine : true; }
+
+function idUnico(){
+  return 'op-' + Date.now().toString(36) + '-' +
+         Math.random().toString(36).slice(2,10) + '-' +
+         Math.random().toString(36).slice(2,6);
+}
+
+/* Comprueba UNA vez si el Apps Script desplegado es el nuevo.
+   El script viejo no conoce la accion 'siguiente' y contesta
+   {ok:false}. Si es el viejo, NO se envia nada: el viejo aceptaria
+   el registro y escribiria una fila con el N en blanco, y como no
+   devuelve numero el sistema reintentaria sin parar, ensuciando la
+   hoja. Mejor detenerse y avisar. */
+var VERSION_MINIMA = 4;   // version del Apps Script que esta app necesita
+
+function verificarBackend(cb){
+  apiPost({accion:'ping'}, function(err,res){
+    if(err){ if(cb) cb(null); return; }              // sin red: no se concluye nada
+    BACKEND_VER = (res && res.version) ? Number(res.version) : 0;
+    BACKEND_OK  = !!(res && res.ok && BACKEND_VER >= VERSION_MINIMA);
+    if(!BACKEND_OK){
+      syncStatus('err','Falta publicar el Apps Script');
+      toast('El servidor responde con la version '+(BACKEND_VER||'anterior')+
+            '. Falta publicar la version '+VERSION_MINIMA+' del Apps Script.','error');
+    }
+    render();
+    if(cb) cb(BACKEND_OK);
+  });
+}
+
+function colaCargar(){
+  try{ var v=JSON.parse(localStorage.getItem(COLA_KEY)||'[]'); COLA=Array.isArray(v)?v:[]; }
+  catch(e){ COLA=[]; }
+}
+function colaGuardar(){
+  try{ localStorage.setItem(COLA_KEY, JSON.stringify(COLA)); }catch(e){}
+}
+
+// Numero de referencia que se muestra al abrir la ventana.
+// Es solo informativo: el definitivo lo pone el servidor.
+function numeroAproximado(tipo){
+  var anio=String(new Date().getFullYear());
+  var lista=DB[tipo]||[], mx=0;
+  for(var i=0;i<lista.length;i++){
+    if(String(lista[i].anio||anio)!==anio) continue;
+    if(Number(lista[i].no)>mx) mx=Number(lista[i].no);
+  }
+  for(var j=0;j<COLA.length;j++) if(COLA[j].tipo===tipo) mx++;   // los que ya estan en cola
+  return mx+1;
+}
+
+function colaPendientes(tipo){
+  var out=[];
+  for(var i=0;i<COLA.length;i++) if(!tipo || COLA[i].tipo===tipo) out.push(COLA[i]);
+  return out;
+}
+
+// Mete el registro en la cola y arranca el envio
+function encolarNuevo(p){
+  p.opId    = idUnico();
+  p.intentos= 0;
+  p.desde   = Date.now();
+  p.proximo = 0;
+  COLA.push(p);
+  colaGuardar();
+  render(); pintarReservas();
+  procesarCola(true);
+}
+
+function quitarDeCola(opId){
+  for(var i=COLA.length-1;i>=0;i--) if(COLA[i].opId===opId) COLA.splice(i,1);
+  colaGuardar();
+}
+
+var colaDesde = 0;   // cuando arranco el envio en curso
+
+/* Ningun candado interno puede quedarse trabado. Si un envio lleva mas
+   de 40 s sin resolverse (peticion perdida, pestaña dormida, cualquier
+   cosa), se suelta y se vuelve a intentar. */
+function vigilarCola(){
+  if(colaEnviando && colaDesde && (Date.now()-colaDesde) > 40000){
+    colaEnviando = false;
+    guardandoAhora = false;
+    hideLoad();
+  }
+  if(!COLA.length && guardandoAhora && colaDesde && (Date.now()-colaDesde) > 40000){
+    guardandoAhora = false;
+  }
+}
+
+function procesarCola(inmediato){
+  vigilarCola();
+  if(colaEnviando) return;
+  if(!COLA.length){ if(!guardandoAhora) syncStatus('ok','Sincronizado'); return; }
+
+  var it = null;
+  for(var i=0;i<COLA.length;i++){ if(!COLA[i].proximo || COLA[i].proximo<=Date.now()){ it=COLA[i]; break; } }
+  if(!it) return;
+
+  if(!enLinea() && !inmediato && it.intentos>0){
+    // navigator.onLine se equivoca a menudo (VPN, wifi captivo). Se respeta
+    // como pista, pero igual se reintenta cuando toca el turno del elemento.
+    syncStatus('err','Sin conexion — '+COLA.length+' pendiente'+(COLA.length>1?'s':''));
+    if(it.proximo > Date.now()) return;
+  }
+  if(BACKEND_OK===false){
+    syncStatus('err','Falta actualizar el Apps Script — '+COLA.length+' en espera');
+    return;                       // se queda esperando, sin escribir basura en la hoja
+  }
+  if(BACKEND_OK===null){ verificarBackend(function(ok){ if(ok) procesarCola(true); }); return; }
+
+  colaEnviando = true;
+  colaDesde    = Date.now();
+  guardandoAhora = true;
+  syncStatus('load','Enviando '+COLA.length+' pendiente'+(COLA.length>1?'s':'')+'...');
+
+  var post = {accion:'agregar', tipo:it.tipo, opId:it.opId, asignarNo:true, anio:it.anio,
+              usuario:it.usuario||'',
+              remite:it.remite, resp:it.resp, fecha:it.fecha, asunto:it.asunto, fact:it.fact,
+              clave:it.clave, centro:it.centro, hospital:it.hospital,
+              monto:it.monto, diagnostico:it.diagnostico};
+  // En Cirugia el numero va dentro de cols; el servidor lo reemplaza por el definitivo
+  if(it.tipo==='Cirugia') post.cols=[0,it.remite,it.clave,it.centro,it.fecha,it.hospital,it.monto,it.diagnostico,it.anio];
+
+  apiPost(post, function(err,res){
+    colaEnviando = false;
+
+    if(!err && res && res.ok && res.no){
+      quitarDeCola(it.opId);
+      DB[it.tipo] = DB[it.tipo] || [];
+      DB[it.tipo].push({no:Number(res.no), remite:it.remite, resp:it.resp, fecha:it.fecha,
+                        asunto:it.asunto, fact:it.fact, clave:it.clave, centro:it.centro,
+                        hospital:it.hospital, monto:it.monto, diagnostico:it.diagnostico,
+                        anio:it.anio, nueva:true});
+      actualizarTabs(); poblarResp(); render();
+      hideLoad();
+      toast(res.duplicado ? 'Ya estaba guardado como N '+res.no+' — no se duplico'
+                          : 'Registro N '+res.no+' guardado');
+      registrarBitacora('Agrego', getTipo(it.tipo).label, res.no, 'Nuevo registro');
+      if(COLA.length){ procesarCola(true); }
+      else {
+        syncStatus('ok','Sincronizado');
+        setTimeout(function(){ guardandoAhora=false; cargarTipo(it.tipo); }, 1200);
+      }
+      return;
+    }
+
+    if(!err && res && res.ok && !res.no){
+      // Contesto bien pero no asigno numero: es el script viejo.
+      // Se detiene la cola en vez de reintentar y seguir ensuciando la hoja.
+      BACKEND_OK=false;
+      it.intentos++; it.proximo = Date.now()+60000; colaGuardar();
+      hideLoad(); guardandoAhora=false; render();
+      syncStatus('err','Falta actualizar el Apps Script');
+      toast('El servidor no asigno numero: falta publicar la nueva version del Apps Script.','error');
+      return;
+    }
+
+    if(!err && res && res.ok===false){
+      // El servidor contesto y rechazo el registro: no tiene caso reintentar
+      quitarDeCola(it.opId);
+      hideLoad(); guardandoAhora=false; render();
+      syncStatus('err','Rechazado por el servidor');
+      toast('El servidor rechazo el registro: '+(res.error||'motivo desconocido'),'error');
+      return;
+    }
+
+    // Sin respuesta: NO se descarta ni se reintenta a ciegas.
+    // Se vuelve a enviar con el MISMO opId, asi que si la fila ya
+    // se escribio el servidor devuelve ese mismo numero.
+    it.intentos++;
+    var esperas=[3000,6000,12000,25000,45000,60000];
+    it.proximo = Date.now() + esperas[Math.min(it.intentos-1, esperas.length-1)];
+    it.ultimoError = String((err&&err.message)||'sin respuesta');
+    colaGuardar();
+    hideLoad(); guardandoAhora=false; render();
+    syncStatus('err', (enLinea()?'Reintentando':'Sin conexion')+' — '+COLA.length+' pendiente'+(COLA.length>1?'s':''));
+  });
+}
+
+// Motor: revisa la cola cada 5 segundos
+function iniciarCola(){
+  colaCargar();
+  clearInterval(colaTimer);
+  colaTimer = setInterval(function(){ try{ vigilarCola(); procesarCola(); }catch(e){} }, 5000);
+  if(COLA.length) procesarCola(true);
+}
+
+window.addEventListener('online',  function(){ toast('Conexion restablecida'); procesarCola(true); });
+window.addEventListener('offline', function(){ syncStatus('err','Sin conexion'); render(); });
+
+function guardar(){
+  // Capturar el modo ANTES de cerrar el modal (cerrarModal resetea editNo/editIdx)
+  var esEdicion = (editNo!==null);
+  var noEdicion = editNo;
+  var noVal;
+  if(esEdicion){
+    noVal=noEdicion;
+  } else {
+    noVal=0;   // lo asigna el servidor al guardar
+  }
+  var esCirug=(tipoActual==='Cirugia');
+  var anioActual=String(new Date().getFullYear());
+  var remite,resp,fecha,asunto,fact,clave,centro,hospital,monto,diagnostico;
+  if(esCirug){
+    remite=document.getElementById('m-cir-remite').value.trim();
+    clave=document.getElementById('m-cir-clave').value.trim();
+    centro=document.getElementById('m-cir-centro').value.trim();
+    fecha=document.getElementById('m-fecha').value.trim();
+    hospital=document.getElementById('m-cir-hospital').value.trim();
+    monto=document.getElementById('m-cir-monto').value.trim();
+    diagnostico=document.getElementById('m-cir-diag').value.trim();
+    resp=''; asunto=''; fact='';
+    if(!remite){toast('Complete el campo A Quien','warn');return;}
+  } else {
+    remite=document.getElementById('m-remite').value.trim();
+    resp=document.getElementById('m-resp').value.trim();
+    fecha=document.getElementById('m-fecha').value.trim();
+    asunto=document.getElementById('m-asunto').value.trim();
+    fact=document.getElementById('m-fact').value.trim();
+    clave=''; centro=''; hospital=''; monto=''; diagnostico='';
+    if(!remite||!resp){toast('Complete destinatario y responsable','warn');return;}
+  }
+  if(esEdicion && !noVal){toast('Error en el N de registro','error');return;}
+  // El numero apartado se usa tal cual: no se recalcula ni se cede
+  cerrarModal();
+  var datos=DB[tipoActual];
+  if(!esEdicion){
+    // No se escribe directo: el registro entra en la cola de envio.
+    // El numero lo asigna el servidor y el opId impide duplicados.
+    encolarNuevo({
+      tipo:tipoActual, anio:anioActual, usuario:(usuarioActual?usuarioActual.nombre:''),
+      remite:remite, resp:resp, fecha:fecha, asunto:asunto, fact:fact,
+      clave:clave, centro:centro, hospital:hospital, monto:monto, diagnostico:diagnostico
+    });
+  } else {
+    // Buscar el registro por su numero original (indice calculado en este momento)
+    var idxLocal = -1;
+    for(var k=0;k<datos.length;k++){ if(datos[k].no===noEdicion){ idxLocal=k; break; } }
+    var orig = idxLocal!==-1 ? datos[idxLocal] : null;
+    var anioEdit = orig ? (orig.anio || anioActual) : anioActual;
+    guardandoAhora = true;
+    showLoad('Actualizando...');
+    var esCirugEdit=(tipoActual==='Cirugia');
+    var editData={accion:'editar',tipo:tipoActual,no_original:noEdicion,no:noEdicion,remite:remite,resp:resp,fecha:fecha,asunto:asunto,fact:fact,clave:clave,centro:centro,hospital:hospital,monto:monto,diagnostico:diagnostico,anio:anioEdit};
+    if(esCirugEdit) editData.cols=[noVal,remite,clave,centro,fecha,hospital,monto,diagnostico];
+    apiPost(editData,function(err,res){
+      guardandoAhora = false;
+      if(!err&&res&&res.ok){
+        var nuevoObj={no:noVal,remite:remite,resp:resp,fecha:fecha,asunto:asunto,fact:fact,clave:clave,centro:centro,hospital:hospital,monto:monto,diagnostico:diagnostico,anio:anioEdit,nueva:false};
+        if(idxLocal!==-1) datos[idxLocal]=nuevoObj; else datos.push(nuevoObj);
+        poblarResp(); render(); syncStatus('ok','Sincronizado'); toast('Registro N '+noVal+' actualizado');
+        registrarBitacora('Edito', getTipo(tipoActual).label, noVal, 'Registro modificado');
+      } else { toast('Error al actualizar','error'); syncStatus('err','Error al actualizar'); }
+      hideLoad();
+    });
+  }
+}
+
+function eliminar(idx){
+  var d=DB[tipoActual][idx];
+  var t=getTipo(tipoActual);
+  confirmar({
+    icono:'&#128465;', titulo:'Borrar registro',
+    mensaje:'Vas a borrar el <b>N '+d.no+'</b> de '+t.label+
+            (d.remite?'<br>A quien se remite: <b>'+d.remite+'</b>':'')+
+            (d.asunto?'<br>Asunto: <b>'+d.asunto+'</b>':''),
+    nota:'Se borra tambien del Google Sheets y no se puede recuperar.',
+    textoSi:'Si, borrar', textoNo:'No, cancelar'
+  }, function(){ eliminarConfirmado(idx); });
+}
+
+function eliminarConfirmado(idx){
+  var d=DB[tipoActual][idx];
+  if(!d) return;
+  showLoad('Eliminando...');
+  apiPost({accion:'eliminar',tipo:tipoActual,no:d.no},function(err,res){
+    if(!err&&res&&res.ok){
+      DB[tipoActual].splice(idx,1); actualizarTabs(); poblarResp(); render();
+      syncStatus('ok','Sincronizado'); toast('Registro N '+d.no+' eliminado','warn');
+      registrarBitacora('Elimino', getTipo(tipoActual).label, d.no, 'Registro eliminado');
+    } else { toast('Error al eliminar','error'); }
+    hideLoad();
+  });
+}
+
+document.getElementById('m-cir-monto').addEventListener('blur',function(){
+  var v=this.value.replace(/[^0-9.]/g,'');
+  if(!v) return;
+  var n=parseFloat(v);
+  if(!isNaN(n)) this.value=n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+});
+
+document.getElementById('m-fecha').addEventListener('input',function(){
+  var v=this.value.replace(/\D/g,'');
+  if(v.length>2) v=v.slice(0,2)+'/'+v.slice(2);
+  if(v.length>5) v=v.slice(0,5)+'/'+v.slice(5,7);
+  this.value=v;
+});
+
+document.getElementById('m-fact').addEventListener('input',function(){
+  var v=this.value.replace(/\D/g,'');
+  if(v.length>2) v=v.slice(0,2)+'/'+v.slice(2);
+  if(v.length>5) v=v.slice(0,5)+'/'+v.slice(5,7);
+  this.value=v;
+});
+
+document.getElementById('m-fecha-picker').addEventListener('change',function(){
+  if(!this.value) return;
+  var p=this.value.split('-');
+  document.getElementById('m-fecha').value=p[2]+'/'+p[1]+'/'+p[0].slice(2);
+});
+
+document.getElementById('m-fact-picker').addEventListener('change',function(){
+  if(!this.value) return;
+  var p=this.value.split('-');
+  document.getElementById('m-fact').value=p[2]+'/'+p[1]+'/'+p[0].slice(2);
+});
+
+
+/* ============================================================
+   IMPORTACION MASIVA DE DOCUMENTOS YA REALIZADOS
+   Para montar de una vez lo que ya se llevaba en papel o en
+   Excel antes de usar el sistema. El numero NO se reasigna:
+   entra el que ya tiene cada documento.
+   ============================================================ */
+var IMP_FILAS = [];           // lo que quedo listo para subir
+var IMP_POR_TANDA = 15;       // filas por peticion: el envio va por URL y no puede ser larga
+
+function abrirImportar(){
+  if(!usuarioActual || usuarioActual.rol!=='admin') return;
+  var sel=document.getElementById('imp-tipo');
+  sel.innerHTML='';
+  for(var i=0;i<TIPOS.length;i++){
+    var o=document.createElement('option');
+    o.value=TIPOS[i].id; o.textContent=TIPOS[i].label;
+    sel.appendChild(o);
+  }
+  sel.value=tipoActual;
+  document.getElementById('imp-anio').value=String(new Date().getFullYear());
+  document.getElementById('imp-texto').value='';
+  document.getElementById('imp-resumen').textContent='';
+  document.getElementById('imp-previa').style.display='none';
+  document.getElementById('imp-progreso').style.display='none';
+  document.getElementById('imp-btn-subir').disabled=true;
+  IMP_FILAS=[];
+  document.getElementById('modal-importar').classList.add('show');
+}
+
+function cerrarImportar(){
+  document.getElementById('modal-importar').classList.remove('show');
+}
+
+/* Acepta 15/03/2026, 15/3/26, 2026-03-15 y lo deja todo en dd/mm/aa,
+   que es como la app guarda y muestra las fechas. */
+function impFecha(v){
+  var s=String(v||'').trim();
+  if(!s) return {fecha:'', anio:''};
+  var m=s.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);
+  if(m){
+    return {fecha:('0'+m[3]).slice(-2)+'/'+('0'+m[2]).slice(-2)+'/'+m[1].slice(2), anio:m[1]};
+  }
+  m=s.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{2,4})/);
+  if(m){
+    var a=m[3].length===2 ? '20'+m[3] : m[3];
+    return {fecha:('0'+m[1]).slice(-2)+'/'+('0'+m[2]).slice(-2)+'/'+a.slice(2), anio:a};
+  }
+  return {fecha:s, anio:''};    // no se entendio: se deja tal cual
+}
+
+function impEscapar(s){
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function revisarImport(){
+  var tipo=document.getElementById('imp-tipo').value;
+  var anioDef=(document.getElementById('imp-anio').value||'').trim()||String(new Date().getFullYear());
+  var texto=document.getElementById('imp-texto').value;
+  var lineas=texto.split(/\r?\n/);
+
+  var yaEnSistema={}, datos=DB[tipo]||[];
+  for(var y=0;y<datos.length;y++){
+    yaEnSistema[(datos[y].anio||anioDef)+'#'+Number(datos[y].no)]=true;
+  }
+
+  var vistos={}, filas=[], listas=0, problemas=0;
+
+  for(var i=0;i<lineas.length;i++){
+    var linea=lineas[i];
+    if(!linea.replace(/[\t;,\s]/g,'')) continue;        // linea en blanco
+
+    /* Al pegar desde Excel los campos vienen separados por tabulador.
+       Si alguien pega desde un CSV se acepta ; o , como respaldo. */
+    var c = linea.indexOf('\t')!==-1 ? linea.split('\t')
+          : linea.indexOf(';')!==-1  ? linea.split(';')
+          : linea.split(',');
+    for(var k=0;k<c.length;k++) c[k]=String(c[k]||'').trim().replace(/^"|"$/g,'');
+
+    var no=Number(String(c[0]||'').replace(/[^\d]/g,''));
+    if(!no){
+      /* Seguramente es el encabezado que se copio sin querer: se salta
+         en silencio, no es un error que valga la pena reportar. */
+      if(i===0) continue;
+      filas.push({err:'El N no es un numero', crudo:linea});
+      problemas++; continue;
+    }
+
+    var f=impFecha(c[3]);
+    var anio=f.anio||anioDef;
+    var llave=anio+'#'+no;
+
+    var estado='', ok=true;
+    if(vistos[llave]){ estado='Repetido en lo que pegaste'; ok=false; problemas++; }
+    else if(yaEnSistema[llave]){ estado='Ya existe en el sistema'; ok=false; problemas++; }
+    else { estado='Listo'; listas++; vistos[llave]=true; }
+
+    filas.push({
+      ok:ok, estado:estado,
+      no:no, remite:c[1]||'', resp:c[2]||'', fecha:f.fecha, asunto:c[4]||'',
+      fact:'', anio:anio
+    });
+  }
+
+  // tabla de revision
+  var tb=document.getElementById('imp-tbody');
+  tb.innerHTML='';
+  for(var j=0;j<filas.length;j++){
+    var r=filas[j];
+    var tr=document.createElement('tr');
+    tr.style.borderBottom='1px solid #d5e3e1';
+    if(r.err){
+      tr.style.background='#fdeaea';
+      tr.innerHTML='<td colspan="6" style="padding:7px 10px;color:#b02020;">'+impEscapar(r.crudo)+'</td>'+
+                   '<td style="padding:7px 10px;color:#b02020;font-weight:600;">'+impEscapar(r.err)+'</td>';
+    } else {
+      if(!r.ok) tr.style.background='#fdf3d8';
+      tr.innerHTML='<td style="padding:7px 10px;font-weight:700;color:#0f5257;">'+r.no+'</td>'+
+        '<td style="padding:7px 10px;">'+impEscapar(r.remite)+'</td>'+
+        '<td style="padding:7px 10px;">'+impEscapar(r.resp)+'</td>'+
+        '<td style="padding:7px 10px;white-space:nowrap;">'+impEscapar(r.fecha)+'</td>'+
+        '<td style="padding:7px 10px;">'+impEscapar(r.asunto)+'</td>'+
+        '<td style="padding:7px 10px;">'+impEscapar(r.anio)+'</td>'+
+        '<td style="padding:7px 10px;font-weight:600;color:'+(r.ok?'#1a7a44':'#a06a00')+';">'+impEscapar(r.estado)+'</td>';
+    }
+    tb.appendChild(tr);
+  }
+
+  IMP_FILAS=filas.filter(function(r){ return r.ok; });
+  document.getElementById('imp-previa').style.display=filas.length?'':'none';
+  document.getElementById('imp-btn-subir').disabled=(listas===0);
+  document.getElementById('imp-resumen').innerHTML =
+    '<b style="color:#1a7a44;">'+listas+'</b> listo(s) para importar' +
+    (problemas ? ' &middot; <b style="color:#a06a00;">'+problemas+'</b> se omitiran' : '') +
+    (listas ? ' &middot; entran a <b>'+getTipo(document.getElementById('imp-tipo').value).label+'</b>' : '');
+}
+
+function ejecutarImport(){
+  if(!IMP_FILAS.length) return;
+  if(BACKEND_OK===false){
+    toast('Falta publicar la version '+VERSION_MINIMA+' del Apps Script','error');
+    return;
+  }
+  var tipo=document.getElementById('imp-tipo').value;
+  var total=IMP_FILAS.length;
+  var tandas=[];
+  for(var i=0;i<total;i+=IMP_POR_TANDA) tandas.push(IMP_FILAS.slice(i,i+IMP_POR_TANDA));
+
+  document.getElementById('imp-btn-subir').disabled=true;
+  document.getElementById('imp-progreso').style.display='';
+  guardandoAhora=true;
+
+  var hechas=0, agregados=0, omitidos=0, fallo=null;
+
+  function pintar(){
+    var pct=Math.round(hechas/tandas.length*100);
+    document.getElementById('imp-barra').style.width=pct+'%';
+    document.getElementById('imp-progreso-txt').textContent=
+      'Subiendo... '+Math.min(hechas*IMP_POR_TANDA,total)+' de '+total+' registro(s)';
+  }
+  pintar();
+
+  function siguiente(){
+    if(fallo || hechas>=tandas.length){ terminar(); return; }
+    var lote=tandas[hechas];
+    apiPost({accion:'importar', tipo:tipo, usuario:(usuarioActual?usuarioActual.nombre:''),
+             anio:(document.getElementById('imp-anio').value||'').trim(),
+             filas:lote}, function(err,res){
+      if(err || !res || !res.ok){
+        fallo = (res && res.error) ? res.error : 'No hubo respuesta del servidor';
+        terminar(); return;
+      }
+      agregados += Number(res.agregados||0);
+      omitidos  += Number(res.omitidos||0);
+      hechas++; pintar();
+      setTimeout(siguiente, 120);   // un respiro entre tandas
+    });
+  }
+
+  function terminar(){
+    guardandoAhora=false;
+    if(fallo){
+      document.getElementById('imp-progreso-txt').innerHTML=
+        '<b style="color:#b02020;">Se detuvo:</b> '+impEscapar(fallo)+
+        '<br>Se alcanzaron a subir '+agregados+' registro(s). Puedes volver a darle Importar: '+
+        'los que ya entraron no se repiten.';
+      document.getElementById('imp-btn-subir').disabled=false;
+      syncStatus('err','Importacion incompleta');
+      return;
+    }
+    document.getElementById('imp-barra').style.width='100%';
+    document.getElementById('imp-progreso-txt').innerHTML=
+      '<b style="color:#1a7a44;">Listo.</b> '+agregados+' registro(s) importados'+
+      (omitidos?' &middot; '+omitidos+' omitidos por estar repetidos':'')+'.';
+    toast(agregados+' registro(s) importados');
+    registrarBitacora('Importo', getTipo(tipo).label, agregados, 'Carga masiva de documentos previos');
+    cargarTipo(tipo, function(){
+      if(tipo!==tipoActual) actualizarTabs();
+    });
+    setTimeout(cerrarImportar, 2500);
+  }
+
+  siguiente();
+}
+
+function abrirUsuarios(){ renderUsuarios(); document.getElementById('modal-usu').classList.add('show'); }
+function cerrarUsuarios(){ document.getElementById('modal-usu').classList.remove('show'); }
+
+function renderUsuarios(){
+  var tbody=document.getElementById('u-body');
+  tbody.innerHTML='';
+  for(var i=0;i<USUARIOS.length;i++){
+    var u=USUARIOS[i];
+    var esSelf=(u.id===usuarioActual.id), esProt=u.protegido;
+    var rolHtml='<span class="'+(u.rol==='admin'?'rol-admin':'rol-usuario')+'">'+(u.rol==='admin'?'Admin':'Usuario')+'</span>';
+    var acciones='';
+    if(!esSelf && !esProt){
+      acciones+='<button class="btn btn-primary btn-sm" style="margin-right:4px" data-uid="'+u.id+'" onclick="cambiarPass(this.dataset.uid)">Clave</button>';
+      acciones+='<button class="btn btn-morado btn-sm" style="margin-right:4px" data-uid="'+u.id+'" onclick="toggleRol(this.dataset.uid)">Rol</button>';
+      acciones+='<button class="btn btn-sm" style="background:#e0f4fd;color:#b35c00;margin-right:4px" data-uid="'+u.id+'" onclick="abrirPermisos(this.dataset.uid)">Acceso</button>';
+      acciones+='<button class="btn btn-danger btn-sm" data-uid="'+u.id+'" onclick="borrarUsuario(this.dataset.uid)">Borrar</button>';
+    } else {
+      acciones='<span style="font-size:11px;color:#7b9491">'+(esSelf?'(sesion activa)':'(protegido)')+'</span>';
+    }
+    var tr=document.createElement('tr');
+    tr.innerHTML='<td><div class="u-av">'+u.nombre.charAt(0).toUpperCase()+'</div></td>'
+      +'<td><strong>'+u.nombre+'</strong></td>'
+      +'<td><code style="font-size:12px;color:#16787f">'+u.id+'</code></td>'
+      +'<td><span style="font-family:monospace;font-size:12px;color:#7b9491">'+u.pass+'</span></td>'
+      +'<td>'+rolHtml+'</td>'
+      +'<td style="white-space:nowrap">'+acciones+'</td>';
+    tbody.appendChild(tr);
+  }
+}
+
+function agregarUsuario(){
+  var nombre=document.getElementById('u-nombre').value.trim();
+  var id=document.getElementById('u-id').value.trim().toLowerCase().replace(/\s+/g,'');
+  var pass=document.getElementById('u-pass').value.trim();
+  var rol=document.getElementById('u-rol').value;
+  if(!nombre||!id||!pass){toast('Complete todos los campos','warn');return;}
+  for(var i=0;i<USUARIOS.length;i++){if(USUARIOS[i].id===id){toast('El ID ya existe','error');return;}}
+  USUARIOS.push({id:id,nombre:nombre,pass:pass,rol:rol,tabs:TODOS_TIPOS.slice()});
+  rebuildLoginSelect(); renderUsuarios(); guardarUsuariosEnSheets();
+  document.getElementById('u-nombre').value='';
+  document.getElementById('u-id').value='';
+  document.getElementById('u-pass').value='';
+  document.getElementById('u-rol').value='usuario';
+  toast('Usuario '+nombre+' agregado');
+}
+
+function borrarUsuario(uid){
+  var idx=-1;
+  for(var i=0;i<USUARIOS.length;i++){if(USUARIOS[i].id===uid){idx=i;break;}}
+  if(idx===-1){toast('Usuario no encontrado','error');return;}
+  var u=USUARIOS[idx];
+  if(u.protegido){toast('Usuario protegido','error');return;}
+  if(u.id===usuarioActual.id){toast('No puedes eliminar tu cuenta activa','error');return;}
+  confirmar({
+    icono:'&#128100;', titulo:'Borrar usuario',
+    mensaje:'Vas a borrar al usuario <b>'+u.nombre+'</b>.',
+    nota:'Perdera el acceso al sistema de inmediato.',
+    textoSi:'Si, borrar', textoNo:'No, cancelar'
+  }, function(){
+    var j=-1;
+    for(var k=0;k<USUARIOS.length;k++){ if(USUARIOS[k].id===uid){ j=k; break; } }
+    if(j===-1) return;
+    var nom=USUARIOS[j].nombre;
+    USUARIOS.splice(j,1);
+    rebuildLoginSelect(); renderUsuarios(); guardarUsuariosEnSheets();
+    toast('Usuario '+nom+' eliminado','warn');
+  });
+}
+
+function toggleRol(uid){
+  for(var i=0;i<USUARIOS.length;i++){
+    if(USUARIOS[i].id===uid){
+      USUARIOS[i].rol=USUARIOS[i].rol==='admin'?'usuario':'admin';
+      renderUsuarios(); guardarUsuariosEnSheets();
+      toast('Rol de '+USUARIOS[i].nombre+' cambiado a '+USUARIOS[i].rol);
+      return;
+    }
+  }
+}
+
+function cambiarPass(uid){
+  for(var i=0;i<USUARIOS.length;i++){
+    if(USUARIOS[i].id===uid){
+      var nueva=prompt('Nueva contrasena para '+USUARIOS[i].nombre+':');
+      if(!nueva||nueva.trim().length<4){toast('Contrasena muy corta (min 4 caracteres)','warn');return;}
+      USUARIOS[i].pass=nueva.trim();
+      renderUsuarios(); guardarUsuariosEnSheets();
+      toast('Contrasena de '+USUARIOS[i].nombre+' actualizada');
+      return;
+    }
+  }
+}
+
+var permisosUID = null;
+
+function abrirPermisos(uid){
+  permisosUID = uid;
+  var u = null;
+  for(var i=0;i<USUARIOS.length;i++){ if(USUARIOS[i].id===uid){u=USUARIOS[i];break;} }
+  if(!u){ toast('Usuario no encontrado','error'); return; }
+  if(!u.tabs || u.tabs.length===0) u.tabs = TODOS_TIPOS.slice();
+  document.getElementById('perm-nombre').textContent = u.nombre;
+  var tabs = u.tabs;
+  var div = document.getElementById('perm-checks');
+  div.innerHTML = '';
+  for(var j=0;j<TIPOS.length;j++){
+    var t=TIPOS[j];
+    var checked=tabs.indexOf(t.id)!==-1 ? 'checked' : '';
+    div.innerHTML += '<label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;background:#f1f6f5;padding:8px 12px;border-radius:8px;border:1.5px solid #d5e3e1;">'
+      +'<input type="checkbox" value="'+t.id+'" '+checked+'>'
+      +'<span>'+t.icon+' '+t.label+'</span></label>';
+  }
+  document.getElementById('modal-usu').classList.remove('show');
+  document.getElementById('modal-permisos').classList.add('show');
+}
+
+function cerrarPermisos(){
+  document.getElementById('modal-permisos').classList.remove('show');
+  document.getElementById('modal-usu').classList.add('show');
+  permisosUID = null;
+}
+
+function guardarPermisos(){
+  if(!permisosUID) return;
+  var checks = document.getElementById('perm-checks').querySelectorAll('input[type=checkbox]');
+  var tabs = [];
+  for(var i=0;i<checks.length;i++){
+    if(checks[i].checked) tabs.push(checks[i].value);
+  }
+  if(tabs.length===0){ toast('Selecciona al menos una pestana','warn'); return; }
+  for(var j=0;j<USUARIOS.length;j++){
+    if(USUARIOS[j].id===permisosUID){
+      USUARIOS[j].tabs = tabs;
+      if(usuarioActual && usuarioActual.id===permisosUID){
+        usuarioActual.tabs = tabs; construirTabs();
+      }
+      break;
+    }
+  }
+  guardarUsuariosEnSheets();
+  toast('Permisos guardados.','success');
+  cerrarPermisos();
+}
+
+function registrarBitacora(accion, tipo, no, detalle){
+  var fecha = new Date().toLocaleString('es-HN');
+  var usuario = usuarioActual ? usuarioActual.nombre : 'Desconocido';
+  BITACORA.unshift({fecha:fecha,usuario:usuario,accion:accion,tipo:tipo,no:no,detalle:detalle||''});
+  apiPost({accion:'agregar',tipo:'bitacora',cols:[fecha,usuario,accion,tipo,String(no),detalle||'']},
+    function(err,res){ if(err||!res||!res.ok) console.log('Bitacora error'); });
+}
+
+function cargarBitacora(cb){
+  apiGet('bitacora', function(err, rows){
+    if(err || !Array.isArray(rows)){ if(cb) cb(); return; }
+    BITACORA = [];
+    rows.filter(function(r){ return r[0] && String(r[0]).trim()!==''; })
+      .forEach(function(r){
+        BITACORA.push({fecha:String(r[0]||''),usuario:String(r[1]||''),accion:String(r[2]||''),tipo:String(r[3]||''),no:String(r[4]||''),detalle:String(r[5]||'')});
+      });
+    if(cb) cb();
+  });
+}
+
+function abrirActividad(){
+  var selU=document.getElementById('act-usuario');
+  var selA=document.getElementById('act-anio');
+  var selT=document.getElementById('act-tipo');
+  var resps=[];
+  TIPOS.forEach(function(t){ (DB[t.id]||[]).forEach(function(d){ if(d.resp&&resps.indexOf(d.resp.trim())===-1) resps.push(d.resp.trim()); }); });
+  resps.sort();
+  selU.innerHTML='<option value="">Todos</option>';
+  resps.forEach(function(r){ selU.innerHTML+='<option value="'+r+'">'+r+'</option>'; });
+  var anios=[]; var anioA=String(new Date().getFullYear());
+  TIPOS.forEach(function(t){ (DB[t.id]||[]).forEach(function(d){ var a=d.anio||anioA; if(anios.indexOf(a)===-1) anios.push(a); }); });
+  anios.sort().reverse();
+  selA.innerHTML='<option value="">Todos</option>';
+  anios.forEach(function(a){ selA.innerHTML+='<option value="'+a+'">'+a+'</option>'; });
+  selT.innerHTML='<option value="">Todas</option>';
+  TIPOS.forEach(function(t){ selT.innerHTML+='<option value="'+t.id+'">'+t.label+'</option>'; });
+  renderActividad();
+  cargarBitacora(function(){ renderBitacora(); });
+  document.getElementById('modal-actividad').classList.add('show');
+}
+
+function cerrarActividad(){ document.getElementById('modal-actividad').classList.remove('show'); }
+
+function renderActividad(){
+  var filtU=document.getElementById('act-usuario').value;
+  var filtA=document.getElementById('act-anio').value;
+  var filtT=document.getElementById('act-tipo').value;
+  var anioA=String(new Date().getFullYear());
+  var mapa={};
+  TIPOS.forEach(function(t){
+    if(filtT && t.id!==filtT) return;
+    (DB[t.id]||[]).forEach(function(d){
+      var resp=(d.resp||'Sin asignar').trim();
+      var anio=d.anio||anioA;
+      if(filtU && resp!==filtU) return;
+      if(filtA && anio!==filtA) return;
+      var key=resp+'|'+t.id;
+      if(!mapa[key]) mapa[key]={resp:resp,tipo:t.id,label:t.label,count:0,ultima:''};
+      mapa[key].count++;
+      if(!mapa[key].ultima||d.fecha>mapa[key].ultima) mapa[key].ultima=d.fecha;
+    });
+  });
+  var totales={};
+  Object.keys(mapa).forEach(function(k){ var r=mapa[k].resp; totales[r]=(totales[r]||0)+mapa[k].count; });
+  var cards=document.getElementById('act-cards');
+  cards.innerHTML='';
+  Object.keys(totales).sort().forEach(function(r){
+    cards.innerHTML+='<div style="background:#e3f0ef;border-radius:6px;padding:8px;text-align:center;border:1.5px solid #bdd4d1;">'
+      +'<div style="font-family:Barlow Condensed,sans-serif;font-weight:700;font-size:20px;color:#0f5257;">'+totales[r]+'</div>'
+      +'<div style="font-size:10px;color:#7b9491;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+r+'</div></div>';
+  });
+  if(!Object.keys(totales).length) cards.innerHTML='<div style="color:#7b9491;font-style:italic;padding:10px;">Sin registros.</div>';
+  var tbody=document.getElementById('act-tbody');
+  tbody.innerHTML='';
+  var filas=Object.values(mapa).sort(function(a,b){ if(a.resp!==b.resp) return a.resp.localeCompare(b.resp,'es'); return b.count-a.count; });
+  if(!filas.length){
+    tbody.innerHTML='<tr><td colspan="4" style="text-align:center;padding:20px;color:#7b9491;font-style:italic;">Sin registros.</td></tr>';
+  } else {
+    filas.forEach(function(f){
+      tbody.innerHTML+='<tr style="border-bottom:1px solid #bdd4d1;">'
+        +'<td style="padding:8px 12px;font-weight:500;">'+f.resp+'</td>'
+        +'<td style="padding:8px 12px;color:#7b9491;">'+f.label+'</td>'
+        +'<td style="padding:8px 12px;text-align:center;font-family:Barlow Condensed,sans-serif;font-weight:700;font-size:16px;color:#0f5257;">'+f.count+'</td>'
+        +'<td style="padding:8px 12px;color:#7b9491;font-size:12px;">'+f.ultima+'</td></tr>';
+    });
+  }
+}
+
+function renderBitacora(){
+  var tbody=document.getElementById('bit-tbody');
+  if(!BITACORA.length){ tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:20px;color:#7b9491;font-style:italic;">Sin modificaciones registradas.</td></tr>'; return; }
+  tbody.innerHTML='';
+  BITACORA.forEach(function(b){
+    var color=b.accion==='Elimino'?'#fde0e0':b.accion==='Edito'?'#fff8e6':'#dff0e8';
+    var tcolor=b.accion==='Elimino'?'#b02020':b.accion==='Edito'?'#c07000':'#1a7a44';
+    tbody.innerHTML+='<tr style="border-bottom:1px solid #bdd4d1;">'
+      +'<td style="padding:8px 12px;font-size:12px;color:#7b9491;">'+b.fecha+'</td>'
+      +'<td style="padding:8px 12px;font-weight:500;">'+b.usuario+'</td>'
+      +'<td style="padding:8px 12px;"><span style="background:'+color+';color:'+tcolor+';padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;">'+b.accion+'</span></td>'
+      +'<td style="padding:8px 12px;color:#7b9491;">'+b.tipo+'</td>'
+      +'<td style="padding:8px 12px;font-size:12px;">'+b.detalle+' (N '+b.no+')</td></tr>';
+  });
+}
+
+function actTab(tab){
+  var isResumen = tab==='resumen';
+  document.getElementById('act-resumen-tabla').style.display = isResumen?'':'none';
+  document.getElementById('act-bitacora-tabla').style.display = isResumen?'none':'';
+  document.getElementById('act-tab-resumen').style.background = isResumen?'#0f5257':'#d5e3e1';
+  document.getElementById('act-tab-resumen').style.color = isResumen?'#fff':'#7b9491';
+  document.getElementById('act-tab-bitacora').style.background = isResumen?'#d5e3e1':'#0f5257';
+  document.getElementById('act-tab-bitacora').style.color = isResumen?'#7b9491':'#fff';
+}
+
+document.getElementById('act-usuario').addEventListener('change', renderActividad);
+document.getElementById('act-anio').addEventListener('change', renderActividad);
+document.getElementById('act-tipo').addEventListener('change', renderActividad);
+document.getElementById('modal-actividad').addEventListener('click',function(e){if(e.target===this)cerrarActividad();});
+document.getElementById('cf-si').addEventListener('click', function(){ cerrarConfirmar(true); });
+document.getElementById('cf-no').addEventListener('click', function(){ cerrarConfirmar(false); });
+document.getElementById('modal-confirmar').addEventListener('click', function(e){ if(e.target===this) cerrarConfirmar(false); });
+document.addEventListener('keydown', function(e){
+  if(e.key==='Escape'){
+    if(confirmarAbierto()){ cerrarConfirmar(false); return; }
+    if(document.getElementById('modal-doc').classList.contains('show')) intentarCerrarModal();
+  }
+});
+document.getElementById('modal-doc').addEventListener('click',function(e){if(e.target===this)intentarCerrarModal();});
+document.getElementById('modal-usu').addEventListener('click',function(e){if(e.target===this)cerrarUsuarios();});
+document.getElementById('modal-permisos').addEventListener('click',function(e){if(e.target===this)cerrarPermisos();});
+document.getElementById('buscar').addEventListener('input', render);
+document.getElementById('filtro-resp').addEventListener('change', render);
+document.getElementById('filtro-dest').addEventListener('change', render);
+document.getElementById('filtro-anio').addEventListener('change', render);
+
+// Si cierran la pestana con un numero apartado, se intenta devolverlo de
+// inmediato; si no alcanza, el servidor lo libera solo por vencimiento.
+window.addEventListener('beforeunload', function(ev){
+  colaGuardar();
+  if(!COLA.length) return;   // nada apartado que devolver: solo avisar si falta enviar
+  ev.preventDefault();
+  ev.returnValue='Hay '+COLA.length+' registro(s) sin enviar. Se reenviaran al volver a entrar.';
+  return ev.returnValue;
+});
+
+// Nota: los datos se cargan al iniciar sesion (completarLogin), no antes.
+// Esto evita 6 peticiones innecesarias al Apps Script al abrir la pagina.
+
+</script>
+<!-- RESPALDO-MENSUAL-DBS -->
+<script>
+/* =========================================================================
+   RESPALDO MENSUAL  -  Capacitaciones
+
+   Cada mes le recuerda al administrador que baje una copia completa de la
+   informacion de esta app en un archivo de Excel, para que si algo falla
+   no se pierda nada.
+
+   - El aviso sale la primera vez que un admin abre la app en un mes nuevo.
+   - Nada se descarga solo: siempre hay que darle clic al boton.
+   - Queda ademas un boton "Respaldo" abajo a la izquierda, por si se quiere
+     bajar una copia en cualquier momento.
+   - Solo lo ven los usuarios con rol de administrador.
+   - Si no hay internet para cargar el componente de Excel, baja la misma
+     informacion en un archivo CSV.
+
+   Para cambiar que se respalda, edita CFG aqui abajo.
+   ========================================================================= */
+(function () {
+  'use strict';
+
+  var CFG = {
+    app: 'cdc',
+    titulo: 'Control de Documentos Capacitaciones',
+    esAdmin: function(){ return !!(usuarioActual && usuarioActual.rol === 'admin'); },
+    quien:   function(){ return usuarioActual ? usuarioActual.nombre : ''; },
+    hojas: function(obj){
+      var h = [], i;
+      var etqStd = {no:'No.', remite:'Remitido a', resp:'Realizado por', fecha:'Fecha',
+                    asunto:'Asunto', fact:'Fecha actividad', anio:'Anio'};
+      var etqCir = {no:'No.', remite:'Paciente', clave:'Clave', centro:'Centro de trabajo',
+                    fecha:'Fecha', hospital:'Hospital', monto:'Monto',
+                    diagnostico:'Diagnostico', anio:'Anio'};
+      for(i = 0; i < TIPOS.length; i++){
+        var t = TIPOS[i].id, cir = (t === 'Cirugia');
+        h.push(obj(TIPOS[i].label || t, DB[t] || [],
+          cir ? ['no','remite','clave','centro','fecha','hospital','monto','diagnostico','anio']
+              : ['no','remite','resp','fecha','asunto','fact','anio'],
+          cir ? etqCir : etqStd, true));
+      }
+      h.push(obj('Bitacora', BITACORA || [],
+        ['fecha','usuario','accion','tipo','no','detalle'],
+        {fecha:'Fecha', usuario:'Usuario', accion:'Accion', tipo:'Tipo', no:'No.', detalle:'Detalle'}, true));
+      var us = [];
+      for(i = 0; i < USUARIOS.length; i++)
+        us.push({id:USUARIOS[i].id, nombre:USUARIOS[i].nombre, rol:USUARIOS[i].rol,
+                 tabs:(USUARIOS[i].tabs || []).join(' | ')});
+      h.push(obj('Usuarios', us, ['id','nombre','rol','tabs'],
+        {id:'Usuario', nombre:'Nombre', rol:'Rol', tabs:'Pestanas'}, true));
+      return h;
+    }
+  };
+
+  /* ---------- utilidades ---------- */
+  var MESES = ['enero','febrero','marzo','abril','mayo','junio','julio',
+               'agosto','septiembre','octubre','noviembre','diciembre'];
+  var CDN_XLSX = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+  var LLAVE = 'cap_respaldo_' + CFG.app;
+
+  function mesActual(){ var d = new Date(); return d.getFullYear() + '-' + ('0'+(d.getMonth()+1)).slice(-2); }
+  function etiquetaMes(){ var d = new Date(); return MESES[d.getMonth()] + ' de ' + d.getFullYear(); }
+  function ultimoRespaldo(){ try { return localStorage.getItem(LLAVE) || ''; } catch(e){ return ''; } }
+  function marcarHecho(){ try { localStorage.setItem(LLAVE, mesActual()); } catch(e){} }
+  function pospuesto(){ try { return sessionStorage.getItem(LLAVE + '_luego') === '1'; } catch(e){ return false; } }
+  function posponer(){ try { sessionStorage.setItem(LLAVE + '_luego','1'); } catch(e){} }
+  function soyAdmin(){ try { return !!CFG.esAdmin(); } catch(e){ return false; } }
+
+  /* Arma una hoja a partir de una lista de objetos. Toma TODAS las claves
+     que aparezcan, para que no se quede ningun dato fuera del respaldo. */
+  function hojaObjetos(nombre, lista, preferidas, etiquetas, soloEstas){
+    lista = lista || [];
+    var claves = [], vistas = {}, i, k;
+    for(i = 0; i < (preferidas||[]).length; i++){
+      k = preferidas[i];
+      if(!vistas[k]){ vistas[k] = 1; claves.push(k); }
+    }
+    for(i = 0; !soloEstas && i < lista.length; i++){
+      var o = lista[i];
+      if(!o || typeof o !== 'object') continue;
+      for(k in o){
+        if(!Object.prototype.hasOwnProperty.call(o,k)) continue;
+        if(k.charAt(0) === '_' || vistas[k]) continue;
+        vistas[k] = 1; claves.push(k);
+      }
+    }
+    var enc = [], fil = [];
+    for(i = 0; i < claves.length; i++) enc.push((etiquetas && etiquetas[claves[i]]) || claves[i]);
+    for(i = 0; i < lista.length; i++){
+      var r = [];
+      for(k = 0; k < claves.length; k++) r.push(lista[i] ? lista[i][claves[k]] : '');
+      fil.push(r);
+    }
+    return { nombre: nombre, encabezados: enc, filas: fil };
+  }
+
+  function valorCelda(v){
+    if(v === null || v === undefined) return '';
+    if(typeof v === 'object'){ try { return JSON.stringify(v); } catch(e){ return String(v); } }
+    return v;
+  }
+  function nombreHoja(n, usados){
+    var s = String(n || 'Hoja').replace(/[:\\\/?*\[\]]/g,'-').substring(0,31) || 'Hoja';
+    var base = s, i = 2;
+    while(usados[s]){ s = (base.substring(0, 28) + '_' + i).substring(0,31); i++; }
+    usados[s] = 1; return s;
+  }
+
+  function armarHojas(){
+    var crudas = [];
+    try { crudas = CFG.hojas(hojaObjetos) || []; } catch(e){ crudas = []; }
+    var usados = {}, salida = [], total = 0;
+    for(var i = 0; i < crudas.length; i++){
+      var h = crudas[i];
+      if(!h) continue;
+      var aoa = [ (h.encabezados || []).slice() ];
+      var fil = h.filas || [];
+      for(var j = 0; j < fil.length; j++){
+        var r = [];
+        for(var k = 0; k < fil[j].length; k++) r.push(valorCelda(fil[j][k]));
+        aoa.push(r);
+      }
+      total += fil.length;
+      salida.push({ nombre: nombreHoja(h.nombre, usados), aoa: aoa, filas: fil.length });
+    }
+    return { hojas: salida, total: total };
+  }
+
+  function portada(res){
+    var d = new Date();
+    var aoa = [
+      ['RESPALDO — ' + CFG.titulo],
+      [],
+      ['Generado', d.toLocaleString('es-HN')],
+      ['Generado por', (function(){ try { return CFG.quien ? CFG.quien() : ''; } catch(e){ return ''; } })()],
+      ['Registros en total', res.total],
+      [],
+      ['Hoja', 'Registros']
+    ];
+    for(var i = 0; i < res.hojas.length; i++) aoa.push([res.hojas[i].nombre, res.hojas[i].filas]);
+    return aoa;
+  }
+
+  function bajarBlobRespaldo(blob, nombre){
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = nombre;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
+  }
+  function campoCSV(v){ return '"' + String(v === null || v === undefined ? '' : v).replace(/"/g,'""') + '"'; }
+
+  function cargarXLSX(cb){
+    if(window.XLSX){ cb(true); return; }
+    var s = document.createElement('script');
+    s.src = CDN_XLSX;
+    s.onload  = function(){ cb(!!window.XLSX); };
+    s.onerror = function(){ cb(false); };
+    document.head.appendChild(s);
+    setTimeout(function(){ if(!window.XLSX) cb(false); }, 12000);
+  }
+
+  var generando = false;
+  function generar(){
+    if(generando) return;
+    var res = armarHojas();
+    if(!res.total){
+      alert('Todavia no hay informacion cargada para respaldar.\n\nEspera a que la app termine de cargar los datos e intenta de nuevo.');
+      return;
+    }
+    generando = true;
+    pintarBotones('Generando...', true);
+    var base = 'Respaldo_' + CFG.app + '_' + mesActual();
+    var listo = false;
+    cargarXLSX(function(hayXLSX){
+      if(listo) return; listo = true;
+      try {
+        if(hayXLSX){
+          var wb = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(portada(res)), 'Respaldo');
+          for(var i = 0; i < res.hojas.length; i++)
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(res.hojas[i].aoa), res.hojas[i].nombre);
+          XLSX.writeFile(wb, base + '.xlsx');
+        } else {
+          /* Sin internet no se puede traer la libreria de Excel: se baja un
+             CSV con todo, separado por hojas. No se pierde nada. */
+          var t = [];
+          for(var h = 0; h < res.hojas.length; h++){
+            t.push('### ' + res.hojas[h].nombre);
+            for(var f = 0; f < res.hojas[h].aoa.length; f++)
+              t.push(res.hojas[h].aoa[f].map(campoCSV).join(','));
+            t.push('');
+          }
+          bajarBlobRespaldo(new Blob(['﻿' + t.join('\r\n')], {type:'text/csv;charset=utf-8;'}), base + '.csv');
+          alert('No se pudo cargar el componente de Excel (sin internet).\n\nSe descargo un archivo CSV con la misma informacion: ' + base + '.csv');
+        }
+        marcarHecho();
+        ocultarAviso();
+      } catch(e){
+        alert('No se pudo generar el respaldo.\n\n' + (e && e.message ? e.message : e));
+      }
+      generando = false;
+      pintarBotones('Descargar respaldo', false);
+    });
+  }
+
+  /* ---------- interfaz ---------- */
+  function estilos(){
+    if(document.getElementById('dbs-resp-css')) return;
+    var st = document.createElement('style');
+    st.id = 'dbs-resp-css';
+    st.textContent =
+      '#dbs-resp-aviso{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:99998;' +
+        'max-width:min(560px,94vw);background:#0f5257;color:#fff;border-radius:12px;' +
+        'box-shadow:0 10px 34px rgba(0,20,60,.4);padding:14px 18px;' +
+        'font-family:Barlow,Segoe UI,system-ui,sans-serif;font-size:13.5px;line-height:1.5}' +
+      '#dbs-resp-aviso b{display:block;font-size:15px;margin-bottom:3px}' +
+      '#dbs-resp-aviso .acc{margin-top:11px;display:flex;gap:9px;flex-wrap:wrap}' +
+      '#dbs-resp-aviso button{border:0;border-radius:7px;padding:8px 15px;font-size:13px;' +
+        'font-weight:700;cursor:pointer;font-family:inherit}' +
+      '#dbs-resp-aviso .si{background:#e8702a;color:#0f5257}' +
+      '#dbs-resp-aviso .no{background:rgba(255,255,255,.16);color:#fff}' +
+      '#dbs-resp-pill{position:fixed;left:16px;bottom:16px;z-index:99997;border:0;cursor:pointer;' +
+        'border-radius:999px;padding:8px 15px;font-size:12px;font-weight:700;letter-spacing:.4px;' +
+        'font-family:Barlow,Segoe UI,system-ui,sans-serif;background:rgba(15,26,40,.86);color:#fff;' +
+        'box-shadow:0 4px 16px rgba(0,0,0,.28)}' +
+      '#dbs-resp-pill:hover{background:#0f5257}' +
+      '#dbs-resp-pill[disabled],#dbs-resp-aviso button[disabled]{opacity:.6;cursor:default}' +
+      '@media print{#dbs-resp-aviso,#dbs-resp-pill{display:none!important}}';
+    document.head.appendChild(st);
+  }
+
+  function pintarBotones(txt, off){
+    var b1 = document.querySelector('#dbs-resp-aviso .si'), b2 = document.getElementById('dbs-resp-pill');
+    if(b1){ b1.textContent = txt; b1.disabled = !!off; }
+    if(b2){ b2.textContent = off ? txt : '🗄 Respaldo'; b2.disabled = !!off; }
+  }
+  function ocultarAviso(){
+    var a = document.getElementById('dbs-resp-aviso');
+    if(a && a.parentNode) a.parentNode.removeChild(a);
+  }
+  function montarPill(){
+    if(document.getElementById('dbs-resp-pill')) return;
+    estilos();
+    var b = document.createElement('button');
+    b.id = 'dbs-resp-pill';
+    b.type = 'button';
+    b.textContent = '🗄 Respaldo';
+    b.title = 'Descargar una copia de toda la informacion de esta app';
+    b.onclick = generar;
+    document.body.appendChild(b);
+  }
+  function montarAviso(){
+    if(document.getElementById('dbs-resp-aviso')) return;
+    estilos();
+    var d = document.createElement('div');
+    d.id = 'dbs-resp-aviso';
+    d.innerHTML =
+      '<b>Respaldo de ' + etiquetaMes() + ' pendiente</b>' +
+      'Descarga una copia en Excel de toda la informacion de ' + CFG.titulo +
+      ', para que si algo falla no se pierda nada.' +
+      '<div class="acc"><button type="button" class="si">Descargar respaldo</button>' +
+      '<button type="button" class="no">Ahora no</button></div>';
+    d.querySelector('.si').onclick = generar;
+    d.querySelector('.no').onclick = function(){ posponer(); ocultarAviso(); };
+    document.body.appendChild(d);
+  }
+
+  function revisar(){
+    if(!soyAdmin()) return;
+    montarPill();
+    if(ultimoRespaldo() !== mesActual() && !pospuesto()) montarAviso();
+  }
+
+  function arrancar(){
+    setTimeout(revisar, 3000);
+    setInterval(revisar, 15000);
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arrancar);
+  else arrancar();
+
+})();
+</script>
+</body>
+</html>
