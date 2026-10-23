@@ -391,14 +391,15 @@ tbody tr.reservada:hover{background:#fbead0!important;}
     </p>
 
     <div style="background:#e3f0ef;border:1.5px solid #d5e3e1;border-radius:8px;padding:11px 14px;margin-bottom:14px;">
-      <div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;color:#0f5257;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Orden de las columnas en Excel</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;color:#0f5257;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Que columnas necesita</div>
       <div style="font-size:12.5px;color:#14302e;">
-        <b>A</b> N &nbsp;&middot;&nbsp; <b>B</b> A quien se remite &nbsp;&middot;&nbsp;
-        <b>C</b> Realizado por &nbsp;&middot;&nbsp; <b>D</b> Fecha &nbsp;&middot;&nbsp;
-        <b>E</b> Asunto
+        N &nbsp;&middot;&nbsp; A quien se remite &nbsp;&middot;&nbsp; Realizado por
+        &nbsp;&middot;&nbsp; Fecha &nbsp;&middot;&nbsp; Asunto
       </div>
       <div style="font-size:11.5px;color:#7b9491;margin-top:5px;">
-        La fecha puede venir como 15/03/2026, 15/3/26 o 2026-03-15. El año se saca de la fecha.
+        <b>No importa en que orden esten.</b> Al darle Revisar se adivina cual es cual y tu
+        lo corriges si hace falta. La fecha puede venir como 15/03/2026, 15/3/26 o 2026-03-15;
+        el año se saca de ahi.
       </div>
     </div>
 
@@ -419,6 +420,12 @@ tbody tr.reservada:hover{background:#fbead0!important;}
     <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;">
       <button class="btn btn-primary" onclick="revisarImport()">Revisar</button>
       <span id="imp-resumen" style="font-size:13px;color:#7b9491;"></span>
+    </div>
+
+    <div id="imp-mapeo" style="display:none;background:#e3f0ef;border:1.5px solid #d5e3e1;border-radius:8px;padding:12px 14px;margin-bottom:14px;">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;color:#0f5257;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;">Que columna es cada cosa</div>
+      <div style="font-size:11.5px;color:#7b9491;margin-bottom:10px;">Lo adivine por el contenido. Si alguna quedo mal, cambiala aqui y la previa se actualiza sola.</div>
+      <div id="imp-mapeo-campos" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;"></div>
     </div>
 
     <div id="imp-previa" style="display:none;max-height:260px;overflow:auto;border:1px solid #d5e3e1;border-radius:8px;margin-bottom:14px;">
@@ -480,7 +487,7 @@ function hojaDe(t){ return PREFIJO_HOJA + t; }
 /* Version de ESTE archivo. Se muestra abajo a la derecha, junto a los
    contadores. Sirve para saber de un vistazo si el navegador esta usando
    la copia nueva o una vieja que quedo en cache. */
-var VERSION_APP = '2026.10.22-7';
+var VERSION_APP = '2026.10.22-8';
 
 function appConfigurada(){
   if(!SCRIPT_URL || SCRIPT_URL.indexOf('PEGAR_AQUI') !== -1) return false;
@@ -1243,6 +1250,14 @@ function abrirModal(idx){
     campoNo.className = 'no-field';
     btnG.disabled = false;               // se puede escribir de una vez
     chip.className = 'res-chip ok show';
+    if(aprox > 99999){
+      chip.className='res-chip warn show';
+      chip.innerHTML='&#9888; <b>El correlativo se ve mal: N '+aprox+'.</b> '+
+        'Hay un registro con un numero disparatado (casi siempre una fecha que entro '+
+        'por error en la columna del N). Busca en la seccion el numero mas alto y borralo, '+
+        'o quita esa fila en el Google Sheets. Mientras tanto, lo que guardes seguira ese numero.';
+      return;
+    }
     chip.innerHTML = '&#128221; El numero se asigna al guardar (sera aprox. el <b>N ' + aprox +
                      '</b>). Nadie mas puede quedarse con el tuyo.';
     syncStatus('ok', enLinea() ? 'Listo' : 'Sin conexion — se enviara al volver');
@@ -1698,9 +1713,25 @@ document.getElementById('m-fact-picker').addEventListener('change',function(){
    Para montar de una vez lo que ya se llevaba en papel o en
    Excel antes de usar el sistema. El numero NO se reasigna:
    entra el que ya tiene cada documento.
+
+   No se exige un orden de columnas: se parte el texto en
+   columnas, se adivina cual es cual por su contenido y el
+   usuario puede corregir el mapeo antes de subir nada.
    ============================================================ */
-var IMP_FILAS = [];           // lo que quedo listo para subir
-var IMP_POR_TANDA = 15;       // filas por peticion: el envio va por URL y no puede ser larga
+var IMP_FILAS   = [];     // lo que quedo listo para subir
+var IMP_GRID    = [];     // el texto pegado, ya partido en columnas
+var IMP_MAPEO   = null;   // {no:0, remite:1, resp:2, fecha:3, asunto:4}
+var IMP_NCOLS   = 0;
+var IMP_POR_TANDA = 15;   // filas por peticion: el envio va por URL y no puede ser larga
+var IMP_NO_MAXIMO = 99999;  // mas alto que esto no es un correlativo, es otra cosa
+
+var IMP_CAMPOS = [
+  {id:'no',     etq:'N (correlativo)'},
+  {id:'remite', etq:'A quien se remite'},
+  {id:'resp',   etq:'Realizado por'},
+  {id:'fecha',  etq:'Fecha'},
+  {id:'asunto', etq:'Asunto'}
+];
 
 function abrirImportar(){
   if(!usuarioActual || usuarioActual.rol!=='admin') return;
@@ -1715,10 +1746,11 @@ function abrirImportar(){
   document.getElementById('imp-anio').value=String(new Date().getFullYear());
   document.getElementById('imp-texto').value='';
   document.getElementById('imp-resumen').textContent='';
+  document.getElementById('imp-mapeo').style.display='none';
   document.getElementById('imp-previa').style.display='none';
   document.getElementById('imp-progreso').style.display='none';
   document.getElementById('imp-btn-subir').disabled=true;
-  IMP_FILAS=[];
+  IMP_FILAS=[]; IMP_GRID=[]; IMP_MAPEO=null; IMP_NCOLS=0;
   document.getElementById('modal-importar').classList.add('show');
 }
 
@@ -1726,15 +1758,36 @@ function cerrarImportar(){
   document.getElementById('modal-importar').classList.remove('show');
 }
 
-/* Acepta 15/03/2026, 15/3/26, 2026-03-15 y lo deja todo en dd/mm/aa,
-   que es como la app guarda y muestra las fechas. */
+function impEscapar(s){
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+/* ---------- lectura de valores sueltos ---------- */
+
+/* Un correlativo es un entero y nada mas. Antes se le quitaban los signos
+   a lo que viniera, y una fecha como 27/7/2021 terminaba convertida en el
+   numero 2772021, que luego rompia el correlativo de todos. Ahora cualquier
+   cosa que no sea un entero limpio se rechaza con su motivo. */
+function impNumero(v){
+  var s=String(v||'').trim().replace(/^[Nn][o°º]?[.\-\s]*/,'');  // admite "No. 128"
+  s=s.replace(/[\s,]/g,'');
+  if(!s) return {err:'sin numero'};
+  if(/[\/\-]/.test(s) || /^\d{1,2}[^\d]\d{1,2}[^\d]\d{2,4}$/.test(s)){
+    return {err:'parece una fecha, no un correlativo'};
+  }
+  if(!/^\d+$/.test(s)) return {err:'no es un numero entero'};
+  var n=Number(s);
+  if(!n) return {err:'el numero es cero'};
+  if(n>IMP_NO_MAXIMO) return {err:'demasiado grande para ser correlativo'};
+  return {no:n};
+}
+
+/* Acepta 15/03/2026, 15/3/26, 2026-03-15 y lo deja todo en dd/mm/aa. */
 function impFecha(v){
   var s=String(v||'').trim();
   if(!s) return {fecha:'', anio:''};
   var m=s.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);
-  if(m){
-    return {fecha:('0'+m[3]).slice(-2)+'/'+('0'+m[2]).slice(-2)+'/'+m[1].slice(2), anio:m[1]};
-  }
+  if(m) return {fecha:('0'+m[3]).slice(-2)+'/'+('0'+m[2]).slice(-2)+'/'+m[1].slice(2), anio:m[1]};
   m=s.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{2,4})/);
   if(m){
     var a=m[3].length===2 ? '20'+m[3] : m[3];
@@ -1743,60 +1796,174 @@ function impFecha(v){
   return {fecha:s, anio:''};    // no se entendio: se deja tal cual
 }
 
-function impEscapar(s){
-  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function impEsFecha(v){
+  var s=String(v||'').trim();
+  return /^\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4}/.test(s) || /^\d{4}[-\/]\d{1,2}[-\/]\d{1,2}/.test(s);
+}
+function impEsEntero(v){
+  var s=String(v||'').trim().replace(/^[Nn][o°º]?[.\-\s]*/,'');
+  return /^\d{1,5}$/.test(s);
 }
 
-function revisarImport(){
-  var tipo=document.getElementById('imp-tipo').value;
-  var anioDef=(document.getElementById('imp-anio').value||'').trim()||String(new Date().getFullYear());
-  var texto=document.getElementById('imp-texto').value;
-  var lineas=texto.split(/\r?\n/);
+/* ---------- partir el texto pegado ---------- */
 
-  var yaEnSistema={}, datos=DB[tipo]||[];
-  for(var y=0;y<datos.length;y++){
-    yaEnSistema[(datos[y].anio||anioDef)+'#'+Number(datos[y].no)]=true;
-  }
-
-  var vistos={}, filas=[], listas=0, problemas=0;
-
+function impPartir(texto){
+  var lineas=texto.split(/\r?\n/), grid=[];
   for(var i=0;i<lineas.length;i++){
     var linea=lineas[i];
-    if(!linea.replace(/[\t;,\s]/g,'')) continue;        // linea en blanco
-
+    if(!linea.replace(/[\t;,\s]/g,'')) continue;          // linea en blanco
     /* Al pegar desde Excel los campos vienen separados por tabulador.
        Si alguien pega desde un CSV se acepta ; o , como respaldo. */
     var c = linea.indexOf('\t')!==-1 ? linea.split('\t')
           : linea.indexOf(';')!==-1  ? linea.split(';')
           : linea.split(',');
     for(var k=0;k<c.length;k++) c[k]=String(c[k]||'').trim().replace(/^"|"$/g,'');
+    grid.push(c);
+  }
+  /* Si la primera fila no trae un entero en ninguna parte pero las de abajo
+     si, era el encabezado copiado sin querer: se descarta. */
+  if(grid.length>1){
+    var hayEnteroArriba=false, hayEnteroAbajo=false;
+    for(var a=0;a<grid[0].length;a++) if(impEsEntero(grid[0][a])) hayEnteroArriba=true;
+    for(var b=0;b<grid[1].length;b++) if(impEsEntero(grid[1][b])) hayEnteroAbajo=true;
+    if(!hayEnteroArriba && hayEnteroAbajo) grid.shift();
+  }
+  return grid;
+}
 
-    var no=Number(String(c[0]||'').replace(/[^\d]/g,''));
-    if(!no){
-      /* Seguramente es el encabezado que se copio sin querer: se salta
-         en silencio, no es un error que valga la pena reportar. */
-      if(i===0) continue;
-      filas.push({err:'El N no es un numero', crudo:linea});
+/* Adivina que columna es cual mirando el contenido, no la posicion:
+   la de enteros cortos es el N, la de fechas es la fecha, la de texto
+   mas largo es el asunto, y las que sobran se reparten en orden. */
+function impAdivinar(grid){
+  var n=0;
+  for(var i=0;i<grid.length;i++) n=Math.max(n,grid[i].length);
+  var muestra=Math.min(grid.length,20);
+  var pts=[];
+  for(var c=0;c<n;c++){
+    var ent=0, fec=0, largo=0, llenos=0;
+    for(var r=0;r<muestra;r++){
+      var v=(grid[r][c]||'').trim();
+      if(!v) continue;
+      llenos++;
+      if(impEsEntero(v)) ent++;
+      if(impEsFecha(v))  fec++;
+      largo+=v.length;
+    }
+    pts.push({c:c, ent:ent, fec:fec, prom:llenos?largo/llenos:0, llenos:llenos});
+  }
+
+  var usadas={}, mapa={no:-1, remite:-1, resp:-1, fecha:-1, asunto:-1};
+
+  function mejor(puntua){
+    var top=null;
+    for(var i=0;i<pts.length;i++){
+      if(usadas[pts[i].c]) continue;
+      var p=puntua(pts[i]);
+      if(p<=0) continue;
+      if(!top || p>top.p) top={c:pts[i].c, p:p};
+    }
+    return top ? top.c : -1;
+  }
+
+  mapa.no    = mejor(function(x){ return x.ent - x.fec*2; });
+  if(mapa.no>=0) usadas[mapa.no]=true;
+  mapa.fecha = mejor(function(x){ return x.fec; });
+  if(mapa.fecha>=0) usadas[mapa.fecha]=true;
+  mapa.asunto= mejor(function(x){ return x.prom; });
+  if(mapa.asunto>=0) usadas[mapa.asunto]=true;
+
+  var libres=[];
+  for(var k=0;k<n;k++) if(!usadas[k]) libres.push(k);
+  mapa.remite = libres.length ? libres.shift() : -1;
+  mapa.resp   = libres.length ? libres.shift() : -1;
+
+  return {mapa:mapa, ncols:n};
+}
+
+function impLetra(i){ return String.fromCharCode(65+i); }
+
+function impPintarMapeo(grid){
+  var cont=document.getElementById('imp-mapeo-campos');
+  cont.innerHTML='';
+  for(var i=0;i<IMP_CAMPOS.length;i++){
+    var campo=IMP_CAMPOS[i];
+    var caja=document.createElement('div');
+    var opts='<option value="-1">(ninguna)</option>';
+    for(var c=0;c<IMP_NCOLS;c++){
+      var ej='';
+      for(var r=0;r<grid.length && !ej;r++) ej=(grid[r][c]||'').trim();
+      if(ej.length>22) ej=ej.slice(0,22)+'...';
+      opts+='<option value="'+c+'"'+(IMP_MAPEO[campo.id]===c?' selected':'')+'>'+
+            'Col '+impLetra(c)+(ej?' - '+impEscapar(ej):'')+'</option>';
+    }
+    caja.innerHTML='<label style="display:block;font-size:10.5px;font-weight:600;color:#0f5257;'+
+      'text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">'+campo.etq+'</label>'+
+      '<select data-campo="'+campo.id+'" style="width:100%;font-family:Barlow,sans-serif;font-size:12px;'+
+      'padding:6px 8px;border:1.5px solid #d5e3e1;border-radius:6px;background:#fff;outline:none;">'+opts+'</select>';
+    cont.appendChild(caja);
+  }
+  var sels=cont.getElementsByTagName('select');
+  for(var s=0;s<sels.length;s++){
+    sels[s].onchange=function(){
+      IMP_MAPEO[this.getAttribute('data-campo')]=Number(this.value);
+      impAplicar();
+    };
+  }
+  document.getElementById('imp-mapeo').style.display='';
+}
+
+/* ---------- revisar ---------- */
+
+function revisarImport(){
+  IMP_GRID=impPartir(document.getElementById('imp-texto').value);
+  if(!IMP_GRID.length){
+    document.getElementById('imp-mapeo').style.display='none';
+    document.getElementById('imp-previa').style.display='none';
+    document.getElementById('imp-btn-subir').disabled=true;
+    document.getElementById('imp-resumen').textContent='No se pego nada.';
+    return;
+  }
+  var adiv=impAdivinar(IMP_GRID);
+  IMP_MAPEO=adiv.mapa; IMP_NCOLS=adiv.ncols;
+  impPintarMapeo(IMP_GRID);
+  impAplicar();
+}
+
+function impAplicar(){
+  var tipo=document.getElementById('imp-tipo').value;
+  var anioDef=(document.getElementById('imp-anio').value||'').trim()||String(new Date().getFullYear());
+  var m=IMP_MAPEO;
+
+  var yaEnSistema={}, datos=DB[tipo]||[];
+  for(var y=0;y<datos.length;y++){
+    yaEnSistema[(datos[y].anio||anioDef)+'#'+Number(datos[y].no)]=true;
+  }
+
+  function dato(fila,idx){ return idx>=0 ? (fila[idx]||'') : ''; }
+
+  var vistos={}, filas=[], listas=0, problemas=0;
+
+  for(var i=0;i<IMP_GRID.length;i++){
+    var fila=IMP_GRID[i];
+    var num=impNumero(dato(fila,m.no));
+    if(num.err){
+      filas.push({err:num.err, crudo:fila.join('  |  ')});
       problemas++; continue;
     }
-
-    var f=impFecha(c[3]);
+    var f=impFecha(dato(fila,m.fecha));
     var anio=f.anio||anioDef;
-    var llave=anio+'#'+no;
+    var llave=anio+'#'+num.no;
 
     var estado='', ok=true;
     if(vistos[llave]){ estado='Repetido en lo que pegaste'; ok=false; problemas++; }
     else if(yaEnSistema[llave]){ estado='Ya existe en el sistema'; ok=false; problemas++; }
     else { estado='Listo'; listas++; vistos[llave]=true; }
 
-    filas.push({
-      ok:ok, estado:estado,
-      no:no, remite:c[1]||'', resp:c[2]||'', fecha:f.fecha, asunto:c[4]||'',
-      fact:'', anio:anio
-    });
+    filas.push({ok:ok, estado:estado, no:num.no,
+      remite:dato(fila,m.remite), resp:dato(fila,m.resp),
+      fecha:f.fecha, asunto:dato(fila,m.asunto), fact:'', anio:anio});
   }
 
-  // tabla de revision
   var tb=document.getElementById('imp-tbody');
   tb.innerHTML='';
   for(var j=0;j<filas.length;j++){
@@ -1823,11 +1990,19 @@ function revisarImport(){
   IMP_FILAS=filas.filter(function(r){ return r.ok; });
   document.getElementById('imp-previa').style.display=filas.length?'':'none';
   document.getElementById('imp-btn-subir').disabled=(listas===0);
+
+  var vacios=0;
+  for(var v=0;v<IMP_FILAS.length;v++) if(!IMP_FILAS[v].remite && !IMP_FILAS[v].asunto) vacios++;
+
   document.getElementById('imp-resumen').innerHTML =
     '<b style="color:#1a7a44;">'+listas+'</b> listo(s) para importar' +
     (problemas ? ' &middot; <b style="color:#a06a00;">'+problemas+'</b> se omitiran' : '') +
-    (listas ? ' &middot; entran a <b>'+getTipo(document.getElementById('imp-tipo').value).label+'</b>' : '');
+    (listas ? ' &middot; entran a <b>'+getTipo(document.getElementById('imp-tipo').value).label+'</b>' : '') +
+    (vacios ? '<br><b style="color:#b02020;">Ojo:</b> '+vacios+' fila(s) quedarian sin destinatario ni asunto. '+
+              'Revisa arriba si las columnas estan bien asignadas.' : '');
 }
+
+/* ---------- subir ---------- */
 
 function ejecutarImport(){
   if(!IMP_FILAS.length) return;
@@ -1856,10 +2031,9 @@ function ejecutarImport(){
 
   function siguiente(){
     if(fallo || hechas>=tandas.length){ terminar(); return; }
-    var lote=tandas[hechas];
     apiPost({accion:'importar', tipo:tipo, usuario:(usuarioActual?usuarioActual.nombre:''),
              anio:(document.getElementById('imp-anio').value||'').trim(),
-             filas:lote}, function(err,res){
+             filas:tandas[hechas]}, function(err,res){
       if(err || !res || !res.ok){
         fallo = (res && res.error) ? res.error : 'No hubo respuesta del servidor';
         terminar(); return;
@@ -1888,9 +2062,7 @@ function ejecutarImport(){
       (omitidos?' &middot; '+omitidos+' omitidos por estar repetidos':'')+'.';
     toast(agregados+' registro(s) importados');
     registrarBitacora('Importo', getTipo(tipo).label, agregados, 'Carga masiva de documentos previos');
-    cargarTipo(tipo, function(){
-      if(tipo!==tipoActual) actualizarTabs();
-    });
+    cargarTipo(tipo, function(){ if(tipo!==tipoActual) actualizarTabs(); });
     setTimeout(cerrarImportar, 2500);
   }
 
